@@ -11,11 +11,12 @@ const reopenIcon = document.getElementById('reopen-icon');
 
 const terminalWindow = document.querySelector('.window');
 const titleBar = terminalWindow.querySelector('.title-bar');
-
+let previousPosition = { left: null, top: null };
 let isDragging = false;
 let dragStartX, dragStartY;
 
 titleBar.addEventListener('mousedown', (e) => {
+  if (terminalWindow.classList.contains('maximized')) return;
   isDragging = true;
   dragStartX = e.clientX - terminalWindow.offsetLeft;
   dragStartY = e.clientY - terminalWindow.offsetTop;
@@ -33,6 +34,26 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('mouseup', () => {
   isDragging = false;
 });
+
+// === Center terminal on page load ===
+function centerTerminal() {
+  const winWidth = window.innerWidth;
+  const winHeight = window.innerHeight;
+  const elWidth = windowEl.offsetWidth;
+  const elHeight = windowEl.offsetHeight;
+  
+  windowEl.style.left = `${(winWidth - elWidth) / 2}px`;
+  windowEl.style.top = `${(winHeight - elHeight) / 2}px`;
+}
+
+window.addEventListener('load', centerTerminal);
+window.addEventListener('resize', () => {
+  if (!windowEl.classList.contains('maximized')) {
+    centerTerminal();
+  }
+});
+
+
 
 
 
@@ -110,9 +131,27 @@ minimizeBtn.addEventListener('click', () => {
   windowEl.classList.toggle('minimized');
 });
 
-// Maximize terminal
 maximizeBtn.addEventListener('click', () => {
-  windowEl.classList.toggle('maximized');
+  const isMax = windowEl.classList.contains('maximized');
+
+  windowEl.classList.add('animate'); // enable animation
+
+  if (!isMax) {
+    previousPosition.left = windowEl.style.left;
+    previousPosition.top = windowEl.style.top;
+    windowEl.style.left = '0px';
+    windowEl.style.top = '0px';
+    windowEl.classList.add('maximized');
+  } else {
+    windowEl.classList.remove('maximized');
+    windowEl.style.left = previousPosition.left || `${(window.innerWidth - windowEl.offsetWidth) / 2}px`;
+    windowEl.style.top = previousPosition.top || `${(window.innerHeight - windowEl.offsetHeight) / 2}px`;
+  }
+
+  // Remove animation after transition ends to avoid affecting drag
+  setTimeout(() => {
+    windowEl.classList.remove('animate');
+  }, 400); // match transition duration
 });
 
 // Reopen terminal
