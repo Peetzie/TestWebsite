@@ -3,21 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>Data Lab | Terminal</title>
-  <link rel="stylesheet" href="style.css">
+  <!-- Modular CSS references -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/terminal.css">
+  <link rel="stylesheet" href="css/circle-icons.css">
+  <link rel="stylesheet" href="css/animations.css">
 </head>
 <body>
-<div id="background-canvas">
-  <div class="circle-container">
-    <img src="Icons/pytorch.png" alt="PyTorch">
-    <img src="Icons/pandas.png" alt="Pandas">
-    <img src="Icons/alteryx.png" alt="Alteryx">
-    <img src="Icons/databricks.png" alt="Databricks">
-    <img src="Icons/python.png" alt="Python">
-    <img src="Icons/Azure DevOps.png" alt="Azure DevOps">
-    <img src="Icons/docker.png" alt="Docker">
+  <div id="background-canvas">
+    <div class="circle-container">
+      <img src="assets/icons/pytorch.png" alt="PyTorch">
+      <img src="assets/icons/pandas.png" alt="Pandas">
+      <img src="assets/icons/alteryx.png" alt="Alteryx">
+      <img src="assets/icons/databricks.png" alt="Databricks">
+      <img src="assets/icons/python.png" alt="Python">
+      <img src="assets/icons/Azure DevOps.png" alt="Azure DevOps">
+      <img src="assets/icons/docker.png" alt="Docker">
+    </div>
   </div>
-</div>
-
 
   <div class="window">
     <div class="title-bar">
@@ -35,6 +39,7 @@
   <!-- Floating reopen icon -->
   <div id="reopen-icon" title="Open Terminal">💻</div>
 
-  <script src="script.js"></script>
+  <!-- Modular JS entry point -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

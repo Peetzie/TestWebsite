@@ -1,0 +1,8 @@
+body {
+  margin: 0;
+  background-color: #1e1e1e;
+  font-family: 'Courier New', Courier, monospace;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+}

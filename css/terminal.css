@@ -1,0 +1,43 @@
+.title-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: #2c2c2c;
+  border-bottom: 1px solid #444;
+  user-select: none;
+  cursor: grab;
+}
+.title-bar:active { cursor: grabbing; }
+
+.dot {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  display: inline-block;
+}
+.red    { background-color: #ff5f56; cursor: pointer; }
+.yellow { background-color: #ffbd2e; cursor: pointer; }
+.green  { background-color: #27c93f; cursor: pointer; }
+
+.app-title {
+  color: #ccc;
+  font-size: 0.9rem;
+  margin: 0 auto;
+}
+
+.terminal {
+  padding: 1.5rem;
+  color: #00ff00;
+  font-size: 1.2rem;
+}
+
+.line { margin-bottom: 0.5rem; }
+
+#hidden-input {
+  position: absolute;
+  top: -100px;
+  opacity: 0;
+}
+
+#user-input { display: inline; }
