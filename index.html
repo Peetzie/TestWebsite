@@ -2,14 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Hello | Terminal Site</title>
+  <title>Data Lab | Terminal</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="terminal">
-    <div class="line">$ echo "Hello"</div>
-    <div class="line">Hello</div>
-    <div class="cursor">█</div>
+<div id="background-canvas">
+  <div class="circle-container">
+    <img src="Icons/pytorch.png" alt="PyTorch">
+    <img src="Icons/pandas.png" alt="Pandas">
+    <img src="Icons/alteryx.png" alt="Alteryx">
+    <img src="Icons/databricks.png" alt="Databricks">
+    <img src="Icons/python.png" alt="Python">
+    <img src="Icons/Azure DevOps.png" alt="Azure DevOps">
+    <img src="Icons/docker.png" alt="Docker">
   </div>
+</div>
+
+
+  <div class="window">
+    <div class="title-bar">
+      <span class="dot red" id="close-btn"></span>
+      <span class="dot yellow" id="minimize-btn"></span>
+      <span class="dot green" id="maximize-btn"></span>
+      <span class="app-title">🧪 Data Terminal</span>
+    </div>
+    <div class="terminal" id="terminal">
+      <div class="line">$ <span id="user-input"></span><span class="cursor">▮</span></div>
+    </div>
+    <input type="text" id="hidden-input" autofocus />
+  </div>
+
+  <!-- Floating reopen icon -->
+  <div id="reopen-icon" title="Open Terminal">💻</div>
+
+  <script src="script.js"></script>
 </body>
 </html>
