@@ -32,6 +32,7 @@
   color: var(--foreground);
   font-size: 1rem;
   overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
   line-height: 1.4;
 }
 
@@ -93,9 +94,19 @@
   flex: 1;
 }
 
+.pro-tip {
+  color: var(--yellow);
+  margin-top: 10px;
+}
+
 .dir {
   color: var(--blue);
   font-weight: bold;
+} 
+
+.completion-suggestions {
+  color: var(--comment);
+  margin-bottom: 5px;
 }
 
 .file-content {

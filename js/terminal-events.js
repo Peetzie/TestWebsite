@@ -1,4 +1,4 @@
-import { handleCommand } from './terminal-logic.js';
+import { handleCommand, commandList } from './terminal-logic.js';
 
 // Command history support
 export let commandHistory = []; // Export the array
@@ -31,6 +31,46 @@ export function setupInput(hiddenInput, terminal) {
   // Handle keydown for arrows and Enter - make the handler async
   hiddenInput.addEventListener('keydown', async (e) => {
     const userInputSpan = document.getElementById('user-input');
+
+    // Autocomplete with Ctrl+A
+    if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      const currentInput = hiddenInput.value.trim();
+      if (!currentInput) return;
+
+      const allCommands = commandList.map(c => c.cmd);
+      const matches = allCommands.filter(c => c.startsWith(currentInput.toLowerCase()));
+
+      if (matches.length === 1) {
+        // Single match: complete it
+        hiddenInput.value = matches[0] + ' ';
+        if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
+        setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
+      } else if (matches.length > 1) {
+        // Multiple matches: display them
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'line completion-suggestions';
+        suggestionsDiv.textContent = matches.join('   ');
+        
+        const currentPrompt = userInputSpan.closest('.prompt');
+        if (currentPrompt) {
+          currentPrompt.insertAdjacentElement('beforebegin', suggestionsDiv);
+        } else {
+          terminal.appendChild(suggestionsDiv);
+        }
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+      return;
+    }
+
+    // Ctrl+L: Clear the terminal
+    if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+      e.preventDefault();
+      // We can directly call handleCommand to clear the screen
+      await handleCommand('clear', terminal);
+      hiddenInput.value = ''; // Also clear the hidden input
+      return;
+    }
 
     // Up arrow: previous command
     if (e.key === 'ArrowUp') {

@@ -2,6 +2,28 @@ import { showWelcomeMessage, typeAnimatedText } from './terminal-ui.js';
 // Import commandHistory to be used by the 'history' command
 import { resetCommandHistory, commandHistory } from './terminal-events.js';
 
+// Centralized command list for help and autocomplete
+export const commandList = [
+  { cmd: '.', desc: 'Open the source code repository from current directory' },
+  { cmd: 'about', desc: 'Learn about me and my background' },
+  { cmd: 'cat', desc: 'Display content of a file (e.g., cat README.md)' },
+  { cmd: 'cd', desc: 'Change directory (e.g., cd js, cd ..)' },
+  { cmd: 'clear', desc: 'Clear the terminal' },
+  { cmd: 'echo', desc: 'Print text to the terminal' },
+  { cmd: 'education', desc: 'Show my educational background' },
+  { cmd: 'email', desc: 'Open your email client to contact me' },
+  { cmd: 'github', desc: 'Open my GitHub profile' },
+  { cmd: 'help', desc: 'Show this help message' },
+  { cmd: 'history', desc: 'Show command history' },
+  { cmd: 'journey', desc: 'Show my professional journey' },
+  { cmd: 'linkedin', desc: 'Open my LinkedIn profile' },
+  { cmd: 'ls', desc: 'List directory contents' },
+  { cmd: 'pwd', desc: 'Print current working directory' },
+  { cmd: 'themes', desc: 'Change the terminal theme (coming soon)' },
+  { cmd: 'welcome', desc: 'Display the welcome message' },
+  { cmd: 'whoami', desc: 'Display the current user' },
+];
+
 let currentDirectory = '/'; // Initial directory
 const fileSystemCache = new Map(); // Cache for API responses
 
@@ -185,27 +207,6 @@ export async function handleCommand(input, terminal) {
       return { clear: true }; // Special return for 'clear'
 
     case 'help':
-      const commandList = [
-        { cmd: '.', desc: 'Open the source code repository from current directory' },
-        { cmd: 'about', desc: 'Learn about me and my background' },
-        { cmd: 'cat', desc: 'Display content of a file (e.g., cat README.md)' },
-        { cmd: 'cd', desc: 'Change directory (e.g., cd js, cd ..)' },
-        { cmd: 'clear', desc: 'Clear the terminal' },
-        { cmd: 'echo', desc: 'Print text to the terminal' },
-        { cmd: 'education', desc: 'Show my educational background' },
-        { cmd: 'email', desc: 'Open your email client to contact me' },
-        { cmd: 'github', desc: 'Open my GitHub profile' },
-        { cmd: 'help', desc: 'Show this help message' },
-        { cmd: 'history', desc: 'Show command history' },
-        { cmd: 'journey', desc: 'Show my professional journey' },
-        { cmd: 'linkedin', desc: 'Open my LinkedIn profile' },
-        { cmd: 'ls', desc: 'List directory contents' },
-        { cmd: 'pwd', desc: 'Print current working directory' },
-        { cmd: 'themes', desc: 'Change the terminal theme (coming soon)' },
-        { cmd: 'welcome', desc: 'Display the welcome message' },
-        { cmd: 'whoami', desc: 'Display the current user' },
-      ];
-
       const title = document.createElement('div');
       title.className = 'line';
       title.textContent = 'Available commands:';
@@ -221,54 +222,22 @@ export async function handleCommand(input, terminal) {
         `;
         terminal.appendChild(helpDiv);
       });
-      break;
 
-    case 'about':
-    case 'about me':
-      // Handle 'about me' as a special case
-      if (args.length > 0 && args[0].toLowerCase() === 'me') {
-        const age = calculateAge('1996-10-17');
-        const aboutText =
-          `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
-          `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
-          `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
-        typeAnimatedText(terminal, aboutText);
-      } else {
-        const age = calculateAge('1996-10-17');
-        const aboutText =
-          `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
-          `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
-          `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
-        typeAnimatedText(terminal, aboutText);
-      }
-      break;
+      const tipContainer = document.createElement('div');
+      tipContainer.className = 'line';
+      tipContainer.style.marginTop = '1em'; // Add some space before the tips
+      tipContainer.innerHTML = `
+        <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+L</span> to clear the terminal screen.</div>
+      `;
+      terminal.appendChild(tipContainer);
       
-    case 'echo':
-      const textToEcho = args.join(' ');
-      const echoLine = document.createElement('div');
-      echoLine.className = 'line';
-      echoLine.textContent = textToEcho;
-      terminal.appendChild(echoLine);
-      break;
-
-    case 'education':
-      const eduText = "I hold a B.Sc. in Software Technology and an M.Sc. in Human-Centered Artificial Intelligence, both from the Technical University of Denmark (DTU).";
-      typeAnimatedText(terminal, eduText);
-      break;
-
-    case 'email':
-      const emailResponse = document.createElement('div');
-      emailResponse.className = 'line';
-      emailResponse.textContent = 'Opening your email client...';
-      terminal.appendChild(emailResponse);
-      setTimeout(() => window.open('mailto:contact.pungent127@silomails.com', '_blank'), 900);
       break;
 
     case 'history':
-      commandHistory.forEach((cmd, index) => {
+      commandHistory.forEach((cmd, i) => {
         const historyLine = document.createElement('div');
         historyLine.className = 'line';
-        historyLine.innerHTML = `<span style="color: var(--comment);">${index + 1}</span>&nbsp;&nbsp;${cmd}`;
+        historyLine.innerHTML = `<span style="color: var(--comment);">${i + 1}</span>&nbsp;&nbsp;${cmd}`;
         terminal.appendChild(historyLine);
       });
       break;
