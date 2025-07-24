@@ -1,3 +1,6 @@
+const journeyWindow = document.getElementById('journey-window');
+const journeyPath = document.getElementById('journey-path');
+
 // Process a terminal command and update the UI with appropriate output
 export function handleCommand(input, terminal) {
   // Create a new DOM element to display the command response
@@ -17,7 +20,11 @@ export function handleCommand(input, terminal) {
     // Return signal that the terminal was cleared so references can be refreshed
     return { clear: true };
   }
-
+  
+ if (input === 'journey') {
+  showJourneyWindow();
+  return { clear: false };
+}   
   // Determine the response content for supported commands or default message
   response.textContent = {
     ls: 'file1.txt  file2.csv  notes.md',            // List mock files
@@ -33,4 +40,27 @@ export function handleCommand(input, terminal) {
 
   // Return signal indicating no terminal reset occurred
   return { clear: false };
+}
+
+
+
+
+
+function animateTimelineLine() {
+  const length = journeyPath.getTotalLength();
+  journeyPath.style.strokeDasharray = length;
+  journeyPath.style.strokeDashoffset = length;
+
+  // Trigger layout
+  journeyPath.getBoundingClientRect();
+
+  journeyPath.style.transition = 'stroke-dashoffset 2s ease-in-out';
+  journeyPath.style.strokeDashoffset = '0';
+}
+
+export function showJourneyWindow() {
+  if (journeyWindow) {
+    journeyWindow.style.display = 'block';
+    animateTimelineLine();
+  }
 }
