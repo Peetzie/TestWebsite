@@ -104,12 +104,13 @@ let awaitingCVLang = false;
 
 // Process a terminal command and update the UI with appropriate output
 export function handleCommand(input, terminal) {
+
   // Convert all input to lowercase for matching
   const normalizedInput = input.trim().toLowerCase();
 
   // If welcome message is active, clear the terminal and set up for first command
   if (welcomeActive) {
-    terminal.innerHTML = ''; // Clear everything (welcome + prompt)
+    terminal.innerHTML = '';
     welcomeActive = false;
 
     // Echo the command as the first line
@@ -129,166 +130,55 @@ export function handleCommand(input, terminal) {
       commandHistory.push(input);
       historyIndex = -1;
     }
-
-    // Now process the command as if the terminal was just cleared
-    // (but don't echo again in the input handler)
-    // Handle 'clear' as a special case: don't process further
-    if (input === 'clear') {
-      return { clear: true };
-    }
-
-    // Process the command as normal, but insert output before the prompt
-    const response = document.createElement('div');
-    response.className = 'line';
-
-    // Special case: if the input is 'clear', reset the terminal content
-    if (input === 'clear') {
-      terminal.innerHTML = ''; // Remove all existing lines
-
-      // Reinsert the prompt line to keep the terminal functional
-      const prompt = document.createElement('div');
-      prompt.className = 'line';
-      prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
-      terminal.appendChild(prompt);
-
-      return { clear: true };
-    }
-
-    // New command: open LinkedIn in a new window
-    if (input === 'linkedIn') {
-      response.textContent = 'Opening LinkedIn profile...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-
-      setTimeout(() => {
-        window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
-      }, 700); // 700ms delay
-
-      return { clear: false, handled: true }; // Prevent immediate new line
-    }
-
-    // New command: open default mail client with your email
-    if (input === 'email me') {
-      response.textContent = 'Opening your email client...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-
-      setTimeout(() => {
-        window.open('mailto:contact.pungent127@silomails.com', '_blank');
-      }, 900); // 700ms delay
-
-      return { clear: false, handled: true }; // Prevent immediate new line
-    }
-if (input === 'github') {
-  response.textContent = 'Opening GitHub profile in a new window...';
-  
-  setTimeout(() => {
-    window.open('https://github.com/Peetzie', '_blank');
-  }, 1300); // Delay to simulate processing time
-  terminal.insertBefore(response, terminal.lastElementChild);
-  return { clear: false };
-}
-if (input === 'journey') {
-  showJourneyWindow();
-  return { clear: false };
-}   
-    // Help command: show available commands
-    if (input === 'help') {
-      const helpLines = [
-        'Available commands:',
-        '',
-        '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
-        '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
-        '<span class="cmd">linkedIn</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
-        '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
-        '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
-        '<span class="cmd">journey</span>   <span class="cmd-desc">Show my professional journey</span>',
-        '<span class="cmd">CV</span>        <span class="cmd-desc">Download my resume (choose DK or ENG)</span>',
-      ];
-      helpLines.forEach(line => {
-        const helpDiv = document.createElement('div');
-        helpDiv.className = 'line';
-        helpDiv.innerHTML = line;
-        terminal.insertBefore(helpDiv, terminal.lastElementChild);
-      });
-      return { clear: true, handled: true };
-    }
-
-    // Determine the response content for supported commands or default message
-    response.textContent = {
-      ls: 'file1.txt  file2.csv  notes.md',            // List mock files
-      pwd: '/home/user/projects'                      // Show mock working directory
-    }[input] || (                                     // Use matching key if available
-      input.startsWith('echo ') ?                     // Echo command: output substring
-        input.slice(5) :                              // Remove 'echo ' prefix
-        `Command not found: ${input}`                 // Fallback for unknown commands
-    );
-
-    terminal.insertBefore(response, terminal.lastElementChild);
-
-    return { clear: true };
+    // Continue to process the command as normal (fall through)
   }
 
-  // If we reach here, welcome message is not active, process normally
+  // Handle CV language prompt
+  if (awaitingCVLang) {
+    awaitingCVLang = false;
+    const response = document.createElement('div');
+    response.className = 'line';
+    let lang = normalizedInput;
+    if (lang === 'dk' || lang === 'danish') {
+      response.textContent = 'Downloading Danish CV...';
+      terminal.insertBefore(response, terminal.lastElementChild);
+      downloadFile('assets/CV_DK.pdf');
+    } else {
+      response.textContent = 'Downloading English CV...';
+      terminal.insertBefore(response, terminal.lastElementChild);
+      downloadFile('assets/CV_eng.pdf');
+    }
+    return { clear: false };
+  }
 
-  // Create a new DOM element to display the command response
-  const response = document.createElement('div');
-  response.className = 'line';
+  // CV command: prompt for language
+  if (normalizedInput === 'cv') {
+    const prompt = document.createElement('div');
+    prompt.className = 'line';
+    prompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>) <span style="color:#888;">[Default: ENG]</span>';
+    terminal.insertBefore(prompt, terminal.lastElementChild);
+    awaitingCVLang = true;
+    return { clear: false, handled: true };
+  }
 
   // Special case: if the input is 'clear', reset the terminal content
-  if (input === 'clear') {
-    terminal.innerHTML = ''; // Remove all existing lines
-
-    // Reinsert the prompt line to keep the terminal functional
+  if (normalizedInput === 'clear') {
+    terminal.innerHTML = '';
     const prompt = document.createElement('div');
     prompt.className = 'line';
     prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
     terminal.appendChild(prompt);
-
     return { clear: true };
   }
 
-  // New command: open LinkedIn in a new window
-  if (input === 'linkedIn') {
-    response.textContent = 'Opening LinkedIn profile...';
-    terminal.insertBefore(response, terminal.lastElementChild);
-
-    setTimeout(() => {
-      window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
-    }, 700); // 700ms delay
-
-    return { clear: false, handled: true }; // Prevent immediate new line
-  }
-
-  // New command: open default mail client with your email
-  if (input === 'email me') {
-    response.textContent = 'Opening your email client...';
-    terminal.insertBefore(response, terminal.lastElementChild);
-
-    setTimeout(() => {
-      window.open('mailto:contact.pungent127@silomails.com', '_blank');
-    }, 900); // 700ms delay
-
-    return { clear: false, handled: true }; // Prevent immediate new line
-  }
-if (input === 'github') {
-  response.textContent = 'Opening GitHub profile in a new window...';
-  
-  setTimeout(() => {
-    window.open('https://github.com/Peetzie', '_blank');
-  }, 1300); // Delay to simulate processing time
-  terminal.insertBefore(response, terminal.lastElementChild);
-  return { clear: false };
-}
-if (input === 'journey') {
-  showJourneyWindow();
-  return { clear: false };
-}   
   // Help command: show available commands
-  if (input === 'help') {
+  if (normalizedInput === 'help') {
     const helpLines = [
       'Available commands:',
       '',
       '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
       '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
+      '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
       '<span class="cmd">linkedIn</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
       '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
       '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
@@ -303,6 +193,73 @@ if (input === 'journey') {
     });
     return { clear: false, handled: true };
   }
+
+  // About/about me command
+  if (normalizedInput === 'about me' || normalizedInput === 'about') {
+    const age = calculateAge('1996-10-17');
+    const aboutText =
+      `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+      `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+      `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+    typeAnimatedText(terminal, aboutText);
+    return { clear: false, handled: true };
+  }
+
+  // LinkedIn command
+  if (normalizedInput === 'linkedin') {
+    const response = document.createElement('div');
+    response.className = 'line';
+    response.textContent = 'Opening LinkedIn profile...';
+    terminal.insertBefore(response, terminal.lastElementChild);
+    setTimeout(() => {
+      window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
+    }, 700);
+    return { clear: false, handled: true };
+  }
+
+  // Email command
+  if (normalizedInput === 'email me') {
+    const response = document.createElement('div');
+    response.className = 'line';
+    response.textContent = 'Opening your email client...';
+    terminal.insertBefore(response, terminal.lastElementChild);
+    setTimeout(() => {
+      window.open('mailto:contact.pungent127@silomails.com', '_blank');
+    }, 900);
+    return { clear: false, handled: true };
+  }
+
+  // GitHub command
+  if (normalizedInput === 'github') {
+    const response = document.createElement('div');
+    response.className = 'line';
+    response.textContent = 'Opening GitHub profile in a new window...';
+    setTimeout(() => {
+      window.open('https://github.com/Peetzie', '_blank');
+    }, 1300);
+    terminal.insertBefore(response, terminal.lastElementChild);
+    return { clear: false, handled: true };
+  }
+
+  // Journey command
+  if (normalizedInput === 'journey') {
+    showJourneyWindow();
+    return { clear: false, handled: true };
+  }
+
+  // Determine the response content for supported commands or default message
+  const response = document.createElement('div');
+  response.className = 'line';
+  response.textContent = {
+    ls: 'file1.txt  file2.csv  notes.md',
+    pwd: '/home/user/projects'
+  }[normalizedInput] || (
+    normalizedInput.startsWith('echo ') ?
+      input.slice(5) :
+      `Command not found: ${input}`
+  );
+  terminal.insertBefore(response, terminal.lastElementChild);
+  return { clear: false, handled: true };
 
   // Handle CV language prompt
   if (awaitingCVLang) {
@@ -368,7 +325,16 @@ if (input === 'journey') {
 
     return { clear: false, handled: true };
   }
-
+  // Inside handleCommand, after other command checks
+  if (normalizedInput === 'about me' || normalizedInput === 'about') {
+    const age = calculateAge('1996-10-17');
+    const aboutText =
+      `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+      `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+      `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+    typeAnimatedText(terminal, aboutText);
+    return { clear: false, handled: true };
+  }
   if (normalizedInput === 'github') {
     const response = document.createElement('div');
     response.className = 'line';
@@ -391,6 +357,7 @@ if (input === 'journey') {
       '',
       '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
       '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
+      '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
       '<span class="cmd">linkedIn</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
       '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
       '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
@@ -564,4 +531,38 @@ function downloadFile(url) {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+// Helper function to calculate age from birthdate
+function calculateAge(birthdate) {
+  const birth = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  
+  return age;
+}
+
+// Helper function to type text with animation
+function typeAnimatedText(terminal, text) {
+  const response = document.createElement('div');
+  response.className = 'line';
+  terminal.insertBefore(response, terminal.lastElementChild);
+  
+  let index = 0;
+  const typingSpeed = 30; // milliseconds per character
+  
+  function typeNextChar() {
+    if (index < text.length) {
+      response.textContent += text.charAt(index);
+      index++;
+      setTimeout(typeNextChar, typingSpeed);
+    }
+  }
+  
+  typeNextChar();
 }
