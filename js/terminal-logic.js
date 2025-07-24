@@ -228,6 +228,7 @@ export async function handleCommand(input, terminal) {
       tipContainer.style.marginTop = '1em'; // Add some space before the tips
       tipContainer.innerHTML = `
         <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+L</span> to clear the terminal screen.</div>
+        <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+A</span> to autocomplete commands.</div>
       `;
       terminal.appendChild(tipContainer);
       

@@ -25,6 +25,7 @@ export function initDrag(windowEl, titleBar) {
 
 // Center terminal in viewport
 export function centerWindow(windowEl) {
+  windowEl.style.position = 'fixed'; // Ensure positioning is relative to the viewport
   const winW = window.innerWidth, winH = window.innerHeight;
   const elW = windowEl.offsetWidth, elH = windowEl.offsetHeight;
   windowEl.style.left = `${(winW - elW) / 2}px`;
@@ -104,46 +105,31 @@ export function showWelcomeMessage(terminal) {
 
 // Window controls: close, minimize, maximize, reopen
 export function setupWindowControls(windowEl, closeBtn, minimizeBtn, maximizeBtn, reopenIcon) {
-  let previousPosition = { left: null, top: null };
+  // For this example, we'll only implement maximize.
+  // You can add logic for close and minimize later.
 
-  // Only add listeners if the buttons exist
-  if (closeBtn && reopenIcon) {
-    closeBtn.addEventListener('click', () => {
-      windowEl.style.display = 'none';
-      reopenIcon.style.display = 'block';
-    });
-  }
+  maximizeBtn.addEventListener('click', () => {
+    const isMaximized = windowEl.classList.contains('maximized');
 
-  if (minimizeBtn) {
-    minimizeBtn.addEventListener('click', () => {
-      windowEl.classList.toggle('minimized');
-    });
-  }
+    if (isMaximized) {
+      // If it's currently maximized, we want to re-center it after it shrinks.
+      // We listen for the transition to end before centering.
+      const onTransitionEnd = () => {
+        centerWindow(windowEl);
+        // Important: Remove the event listener so it doesn't fire again
+        windowEl.removeEventListener('transitionend', onTransitionEnd);
+      };
+      windowEl.addEventListener('transitionend', onTransitionEnd);
+    }
+    
+    // Toggle the class to start the transition (either maximizing or shrinking)
+    windowEl.classList.toggle('maximized');
+  });
 
-  if (maximizeBtn) {
-    maximizeBtn.addEventListener('click', () => {
-      const isMax = windowEl.classList.contains('maximized');
-      windowEl.classList.add('animate');
-
-      if (!isMax) {
-        previousPosition.left = windowEl.style.left;
-        previousPosition.top = windowEl.style.top;
-        windowEl.style.left = '0px';
-        windowEl.style.top = '0px';
-        windowEl.classList.add('maximized');
-      } else {
-        windowEl.classList.remove('maximized');
-        windowEl.style.left = previousPosition.left || `${(window.innerWidth - windowEl.offsetWidth) / 2}px`;
-        windowEl.style.top = previousPosition.top || `${(window.innerHeight - windowEl.offsetHeight) / 2}px`;
-      }
-
-      setTimeout(() => windowEl.classList.remove('animate'), 400);
-    });
-  }
-
+  // Example for a reopen icon if you add minimize functionality
   if (reopenIcon) {
     reopenIcon.addEventListener('click', () => {
-      windowEl.style.display = 'block';
+      windowEl.style.display = 'flex';
       reopenIcon.style.display = 'none';
     });
   }
