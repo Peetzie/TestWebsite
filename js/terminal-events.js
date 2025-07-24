@@ -4,10 +4,23 @@ import { handleCommand } from './terminal-logic.js';
 let commandHistory = [];
 let historyIndex = -1;
 
+// Export a function to reset the command history from other modules
+export function resetCommandHistory() {
+  commandHistory = [];
+  historyIndex = -1;
+}
+
 // Initialize input handling for the terminal interface
-export function setupInput(hiddenInput, userInputSpan, terminal) {
+export function setupInput(hiddenInput, terminal) {
+  let userInputSpan = document.getElementById('user-input');
+
   // Automatically focus hidden input when the user clicks anywhere on the document
-  document.addEventListener('click', () => hiddenInput.focus());
+  document.addEventListener('click', (e) => {
+    // Only focus if the click is inside the terminal window
+    if (e.target.closest('.window')) {
+      hiddenInput.focus();
+    }
+  });
 
   // Update the visible user input span to reflect typed characters in real time
   hiddenInput.addEventListener('input', (e) => {

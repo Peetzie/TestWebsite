@@ -1,3 +1,5 @@
+import { resetCommandHistory } from './terminal-events.js'; // Import the new function
+
 const journeyWindow = document.getElementById('journey-window');
 const journeyCloseBtn = document.getElementById('journey-close-btn');
 const journeyPath = document.getElementById('journey-path');
@@ -71,6 +73,19 @@ function placeCaretAtEnd(el) {
 // Track if welcome message is currently shown
 let welcomeActive = true;
 
+// Function to reset the terminal to its initial state
+export function resetTerminal(terminal) {
+  welcomeActive = true;
+  terminal.innerHTML = ''; // Clear all content
+  showWelcomeMessage(terminal); // Show the welcome message
+  resetCommandHistory(); // Reset the command history
+  // Add the initial input line back
+  const prompt = document.createElement('div');
+  prompt.className = 'line';
+  prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
+  terminal.appendChild(prompt);
+}
+
 // Welcome message function
 export function showWelcomeMessage(terminal) {
   welcomeActive = true;
@@ -108,313 +123,116 @@ export function handleCommand(input, terminal) {
   // Convert all input to lowercase for matching
   const normalizedInput = input.trim().toLowerCase();
 
-  // If welcome message is active, clear the terminal and set up for first command
+  // If welcome message is active, clear it before processing the command
   if (welcomeActive) {
-    terminal.innerHTML = '';
+    clearWelcomeMessage(terminal);
     welcomeActive = false;
-
-    // Echo the command as the first line
-    const echoed = document.createElement('div');
-    echoed.className = 'line';
-    echoed.textContent = `$ ${input}`;
-    terminal.appendChild(echoed);
-
-    // Add the prompt line for next input
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
-    terminal.appendChild(prompt);
-
-    // Add to history if not empty
-    if (input.trim() !== '') {
-      commandHistory.push(input);
-      historyIndex = -1;
-    }
-    // Continue to process the command as normal (fall through)
   }
 
-  // Handle CV language prompt
+  // Handle CV language prompt (this must come before other commands)
   if (awaitingCVLang) {
     awaitingCVLang = false;
     const response = document.createElement('div');
     response.className = 'line';
-    let lang = normalizedInput;
-    if (lang === 'dk' || lang === 'danish') {
+    if (normalizedInput === 'dk' || normalizedInput === 'danish') {
       response.textContent = 'Downloading Danish CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
       downloadFile('assets/CV_DK.pdf');
-    } else {
+    } else if (normalizedInput === 'eng' || normalizedInput === 'english') {
       response.textContent = 'Downloading English CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
       downloadFile('assets/CV_eng.pdf');
-    }
-    return { clear: false };
-  }
-
-  // CV command: prompt for language
-  if (normalizedInput === 'cv') {
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>) <span style="color:#888;">[Default: ENG]</span>';
-    terminal.insertBefore(prompt, terminal.lastElementChild);
-    awaitingCVLang = true;
-    return { clear: false, handled: true };
-  }
-
-  // Special case: if the input is 'clear', reset the terminal content
-  if (normalizedInput === 'clear') {
-    terminal.innerHTML = '';
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
-    terminal.appendChild(prompt);
-    return { clear: true };
-  }
-
-  // Help command: show available commands
-  if (normalizedInput === 'help') {
-    const helpLines = [
-      'Available commands:',
-      '',
-      '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
-      '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
-      '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
-      '<span class="cmd">linkedIn</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
-      '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
-      '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
-      '<span class="cmd">journey</span>   <span class="cmd-desc">Show my professional journey</span>',
-      '<span class="cmd">CV</span>        <span class="cmd-desc">Download my resume (choose DK or ENG)</span>',
-    ];
-    helpLines.forEach(line => {
-      const helpDiv = document.createElement('div');
-      helpDiv.className = 'line';
-      helpDiv.innerHTML = line;
-      terminal.insertBefore(helpDiv, terminal.lastElementChild);
-    });
-    return { clear: false, handled: true };
-  }
-
-  // About/about me command
-  if (normalizedInput === 'about me' || normalizedInput === 'about') {
-    const age = calculateAge('1996-10-17');
-    const aboutText =
-      `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
-      `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
-      `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
-    typeAnimatedText(terminal, aboutText);
-    return { clear: false, handled: true };
-  }
-
-  // LinkedIn command
-  if (normalizedInput === 'linkedin') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening LinkedIn profile...';
-    terminal.insertBefore(response, terminal.lastElementChild);
-    setTimeout(() => {
-      window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
-    }, 700);
-    return { clear: false, handled: true };
-  }
-
-  // Email command
-  if (normalizedInput === 'email me') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening your email client...';
-    terminal.insertBefore(response, terminal.lastElementChild);
-    setTimeout(() => {
-      window.open('mailto:contact.pungent127@silomails.com', '_blank');
-    }, 900);
-    return { clear: false, handled: true };
-  }
-
-  // GitHub command
-  if (normalizedInput === 'github') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening GitHub profile in a new window...';
-    setTimeout(() => {
-      window.open('https://github.com/Peetzie', '_blank');
-    }, 1300);
-    terminal.insertBefore(response, terminal.lastElementChild);
-    return { clear: false, handled: true };
-  }
-
-  // Journey command
-  if (normalizedInput === 'journey') {
-    showJourneyWindow();
-    return { clear: false, handled: true };
-  }
-
-  // Determine the response content for supported commands or default message
-  const response = document.createElement('div');
-  response.className = 'line';
-  response.textContent = {
-    ls: 'file1.txt  file2.csv  notes.md',
-    pwd: '/home/user/projects'
-  }[normalizedInput] || (
-    normalizedInput.startsWith('echo ') ?
-      input.slice(5) :
-      `Command not found: ${input}`
-  );
-  terminal.insertBefore(response, terminal.lastElementChild);
-  return { clear: false, handled: true };
-
-  // Handle CV language prompt
-  if (awaitingCVLang) {
-    awaitingCVLang = false;
-    const response = document.createElement('div');
-    response.className = 'line';
-
-    let lang = normalizedInput;
-    if (lang === 'dk' || lang === 'danish') {
-      response.textContent = 'Downloading Danish CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-      downloadFile('assets/CV_DK.pdf');
     } else {
-      response.textContent = 'Downloading English CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-      downloadFile('assets/CV_eng.pdf');
+      response.textContent = 'Invalid language selection. Please choose either ENG or DK.';
     }
-    return { clear: false };
-  }
-
-  // CV command: prompt for language
-  if (normalizedInput === 'cv') {
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>) <span style="color:#888;">[Default: ENG]</span>';
-    terminal.insertBefore(prompt, terminal.lastElementChild);
-    awaitingCVLang = true;
-    return { clear: false, handled: true };
-  }
-
-  // Use normalizedInput for all command checks
-  if (normalizedInput === 'clear') {
-    terminal.innerHTML = '';
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
-    terminal.appendChild(prompt);
-    return { clear: true };
-  }
-
-  if (normalizedInput === 'linkedin') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening LinkedIn profile...';
     terminal.insertBefore(response, terminal.lastElementChild);
-
-    setTimeout(() => {
-      window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
-    }, 700);
-
     return { clear: false, handled: true };
   }
 
-  if (normalizedInput === 'email me') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening your email client...';
-    terminal.insertBefore(response, terminal.lastElementChild);
+  // --- Main Command Switch ---
+  switch (normalizedInput) {
+    case 'clear':
+      terminal.innerHTML = '';
+      const prompt = document.createElement('div');
+      prompt.className = 'line';
+      prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
+      terminal.appendChild(prompt);
+      return { clear: true }; // Special return for 'clear'
 
-    setTimeout(() => {
-      window.open('mailto:contact.pungent127@silomails.com', '_blank');
-    }, 900);
+    case 'help':
+      const helpLines = [
+        'Available commands:', '',
+        '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
+        '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
+        '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
+        '<span class="cmd">linkedin</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
+        '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
+        '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
+        '<span class="cmd">journey</span>   <span class="cmd-desc">Show my professional journey</span>',
+        '<span class="cmd">cv</span>        <span class="cmd-desc">Download my resume (choose DK or ENG)</span>',
+      ];
+      helpLines.forEach(line => {
+        const helpDiv = document.createElement('div');
+        helpDiv.className = 'line';
+        helpDiv.innerHTML = line;
+        terminal.insertBefore(helpDiv, terminal.lastElementChild);
+      });
+      break;
 
-    return { clear: false, handled: true };
-  }
-  // Inside handleCommand, after other command checks
-  if (normalizedInput === 'about me' || normalizedInput === 'about') {
-    const age = calculateAge('1996-10-17');
-    const aboutText =
-      `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
-      `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
-      `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
-    typeAnimatedText(terminal, aboutText);
-    return { clear: false, handled: true };
-  }
-  if (normalizedInput === 'github') {
-    const response = document.createElement('div');
-    response.className = 'line';
-    response.textContent = 'Opening GitHub profile in a new window...';
-    setTimeout(() => {
-      window.open('https://github.com/Peetzie', '_blank');
-    }, 1300);
-    terminal.insertBefore(response, terminal.lastElementChild);
-    return { clear: false };
-  }
+    case 'about':
+    case 'about me':
+      const age = calculateAge('1996-10-17');
+      const aboutText =
+        `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+        `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+        `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+      typeAnimatedText(terminal, aboutText);
+      break;
 
-  if (normalizedInput === 'journey') {
-    showJourneyWindow();
-    return { clear: false };
-  }
+    case 'linkedin':
+      const linkedInResponse = document.createElement('div');
+      linkedInResponse.className = 'line';
+      linkedInResponse.textContent = 'Opening LinkedIn profile...';
+      terminal.insertBefore(linkedInResponse, terminal.lastElementChild);
+      setTimeout(() => window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank'), 700);
+      break;
 
-  if (normalizedInput === 'help') {
-    const helpLines = [
-      'Available commands:',
-      '',
-      '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
-      '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
-      '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
-      '<span class="cmd">linkedIn</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
-      '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
-      '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
-      '<span class="cmd">journey</span>   <span class="cmd-desc">Show my professional journey</span>',
-      '<span class="cmd">CV</span>        <span class="cmd-desc">Download my resume (choose DK or ENG)</span>',
-    ];
-    helpLines.forEach(line => {
-      const helpDiv = document.createElement('div');
-      helpDiv.className = 'line';
-      helpDiv.innerHTML = line;
-      terminal.insertBefore(helpDiv, terminal.lastElementChild);
-    });
-    return { clear: false, handled: true };
-  }
+    case 'email me':
+      const emailResponse = document.createElement('div');
+      emailResponse.className = 'line';
+      emailResponse.textContent = 'Opening your email client...';
+      terminal.insertBefore(emailResponse, terminal.lastElementChild);
+      setTimeout(() => window.open('mailto:contact.pungent127@silomails.com', '_blank'), 900);
+      break;
 
-  // Handle CV language prompt
-  if (awaitingCVLang) {
-    awaitingCVLang = false;
-    const response = document.createElement('div');
-    response.className = 'line';
+    case 'github':
+      const githubResponse = document.createElement('div');
+      githubResponse.className = 'line';
+      githubResponse.textContent = 'Opening GitHub profile in a new window...';
+      terminal.insertBefore(githubResponse, terminal.lastElementChild);
+      setTimeout(() => window.open('https://github.com/Peetzie', '_blank'), 1300);
+      break;
 
-    let lang = normalizedInput;
-    if (lang === 'dk' || lang === 'danish') {
-      response.textContent = 'Downloading Danish CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-      downloadFile('assets/CV_DK.pdf');
-    } else {
-      response.textContent = 'Downloading English CV...';
-      terminal.insertBefore(response, terminal.lastElementChild);
-      downloadFile('assets/CV_eng.pdf');
-    }
-    return { clear: false };
-  }
+    case 'journey':
+      showJourneyWindow();
+      break;
 
-  // CV command: prompt for language
-  if (normalizedInput === 'cv') {
-    const prompt = document.createElement('div');
-    prompt.className = 'line';
-    prompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>) <span style="color:#888;">[Default: ENG]</span>';
-    terminal.insertBefore(prompt, terminal.lastElementChild);
-    awaitingCVLang = true;
-    return { clear: false, handled: true };
+    case 'cv':
+      const cvPrompt = document.createElement('div');
+      cvPrompt.className = 'line';
+      cvPrompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>)';
+      terminal.insertBefore(cvPrompt, terminal.lastElementChild);
+      awaitingCVLang = true;
+      break;
+
+    default:
+      // Handle unknown commands
+      const defaultResponse = document.createElement('div');
+      defaultResponse.className = 'line';
+      defaultResponse.textContent = `Command not found: ${input}`;
+      terminal.insertBefore(defaultResponse, terminal.lastElementChild);
+      break;
   }
 
-  // Determine the response content for supported commands or default message
-  response.textContent = {
-    ls: 'file1.txt  file2.csv  notes.md',            // List mock files
-    pwd: '/home/user/projects'                      // Show mock working directory
-  }[input] || (                                     // Use matching key if available
-    input.startsWith('echo ') ?                     // Echo command: output substring
-      input.slice(5) :                              // Remove 'echo ' prefix
-      `Command not found: ${input}`                 // Fallback for unknown commands
-  );
-
-  terminal.insertBefore(response, terminal.lastElementChild);
-
-  return { clear: false };
+  return { clear: false }; // Default return
 }
 
 function renderTimeline(events) {

@@ -6,7 +6,6 @@
   height: 300px;
   transform: translate(-50%, -50%);
   z-index: 0;
-  pointer-events: none;
 }
 
 .circle-container img {
@@ -17,6 +16,13 @@
   max-height: 80px;
   object-fit: contain;
   transform: translate(-50%, -50%);
+  transition: transform 0.3s ease; /* Add smooth transition */
+  pointer-events: auto; /* Enable hover on icons */
+}
+
+.circle-container img:hover {
+  transform: translate(-50%, -50%) scale(1.4); /* Enlarge on hover */
+  z-index: 1; /* Bring hovered icon to the front */
 }
 
 /* Specific positions */
@@ -27,3 +33,4 @@
 .circle-container img:nth-child(5) { top: 100%; left: 50%; }
 .circle-container img:nth-child(6) { top: 80%; left: 15%; }
 .circle-container img:nth-child(7) { top: 50%; left: 0%; }
+.circle-container img:nth-child(8) { top: 20%; left: 15%; }
