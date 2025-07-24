@@ -1,5 +1,6 @@
 import { initDrag, centerWindow, setupWindowControls } from './terminal-ui.js';
 import { setupInput } from './terminal-events.js';
+import { showWelcomeMessage } from './terminal-logic.js'; // <-- Import the function
 
 const windowEl = document.querySelector('.window');
 const titleBar = windowEl.querySelector('.title-bar');
@@ -16,6 +17,7 @@ console.log('Initializing terminal UI...');
 
 window.addEventListener('load', () => {
   centerWindow(windowEl);
+  showWelcomeMessage(terminal); // <-- Show welcome message on load
 });
 
 window.addEventListener('resize', () => {

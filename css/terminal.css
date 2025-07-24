@@ -41,3 +41,29 @@
 }
 
 #user-input { display: inline; }
+
+.cmd {
+  color: #4ec9b0;
+  font-weight: bold;
+  font-family: monospace;
+  margin-right: 1em;
+  min-width: 90px;
+  display: inline-block;
+}
+.cmd-desc {
+  color: #d4d4d4;
+  font-family: monospace;
+}
+
+.welcome-title {
+  color: #4ec9b0;
+  font-weight: bold;
+  font-size: 1.15em;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5em;
+  display: block;
+}
+
+.welcome-line {
+  color: #00ff00;
+}
