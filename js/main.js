@@ -1,7 +1,6 @@
 import { initDrag, centerWindow, setupWindowControls } from './terminal-ui.js';
 import { setupInput } from './terminal-events.js';
-const journeyWindow = document.getElementById('journey-window');
-const journeyPath = document.getElementById('journey-path');
+
 const windowEl = document.querySelector('.window');
 const titleBar = windowEl.querySelector('.title-bar');
 const terminal = document.getElementById('terminal');
