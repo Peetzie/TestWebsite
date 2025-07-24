@@ -21,8 +21,28 @@ export function handleCommand(input, terminal) {
     // Return signal that the terminal was cleared so references can be refreshed
     return { clear: true };
   }
+
+  // New command: open LinkedIn in a new window
+  if (input === 'linkedIn') {
+    
+    response.textContent = 'Opening LinkedIn profile in a new window...';
+    
+    setTimeout(() => {
+      window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank');
+    }, 1300); // Delay to simulate processing time
+    terminal.insertBefore(response, terminal.lastElementChild);
+    return { clear: false };
+  }
+if (input === 'github') {
+  response.textContent = 'Opening GitHub profile in a new window...';
   
- if (input === 'journey') {
+  setTimeout(() => {
+    window.open('https://github.com/Peetzie', '_blank');
+  }, 1300); // Delay to simulate processing time
+  terminal.insertBefore(response, terminal.lastElementChild);
+  return { clear: false };
+}
+if (input === 'journey') {
   showJourneyWindow();
   return { clear: false };
 }   
@@ -68,7 +88,10 @@ function renderTimeline(events) {
       // Circle with only the main title by default
       const circle = document.createElement('div');
       circle.className = 'timeline-circle';
-      circle.innerHTML = `<strong>${event.title}</strong><div class="circle-desc">${event.description}</div>`;
+      circle.innerHTML = `
+  <strong>${event.title}</strong>
+  <div class="circle-desc">${event.description}</div>
+`;
       circle.querySelector('.circle-desc').style.display = 'none';
 
       // Show description and enlarge on hover
