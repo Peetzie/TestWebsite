@@ -1,359 +1,351 @@
-import { resetCommandHistory } from './terminal-events.js'; // Import the new function
+import { showWelcomeMessage, typeAnimatedText } from './terminal-ui.js';
+// Import commandHistory to be used by the 'history' command
+import { resetCommandHistory, commandHistory } from './terminal-events.js';
 
-const journeyWindow = document.getElementById('journey-window');
-const journeyCloseBtn = document.getElementById('journey-close-btn');
-const journeyPath = document.getElementById('journey-path');
+let currentDirectory = '/'; // Initial directory
+const fileSystemCache = new Map(); // Cache for API responses
 
-// Command history support
-let commandHistory = [];
-let historyIndex = -1;
-
-// Listen for keydown events on the document
-document.addEventListener('keydown', function(e) {
-  const userInput = document.getElementById('user-input');
-  if (!userInput || document.activeElement !== userInput) return;
-
-  // Up arrow: show previous command
-  if (e.key === 'ArrowUp') {
-    if (commandHistory.length === 0) return;
-    if (historyIndex === -1) {
-      historyIndex = commandHistory.length - 1;
-    } else if (historyIndex > 0) {
-      historyIndex--;
-    }
-    userInput.textContent = commandHistory[historyIndex];
-    placeCaretAtEnd(userInput);
-    e.preventDefault();
+// --- GitHub API Helper ---
+async function getDirectoryContents(path) {
+  if (fileSystemCache.has(path)) {
+    return fileSystemCache.get(path);
   }
-
-  // Down arrow: show next command or clear input
-  if (e.key === 'ArrowDown') {
-    if (commandHistory.length === 0) return;
-    if (historyIndex === -1) return;
-    if (historyIndex < commandHistory.length - 1) {
-      historyIndex++;
-      userInput.textContent = commandHistory[historyIndex];
-    } else {
-      historyIndex = -1;
-      userInput.textContent = '';
+  try {
+    const response = await fetch(`https://api.github.com/repos/Peetzie/TestWebsite/contents${path}`);
+    if (!response.ok) {
+      throw new Error(`GitHub API error: ${response.status}`);
     }
-    placeCaretAtEnd(userInput);
-    e.preventDefault();
-  }
-
-  // Enter: submit command
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const input = userInput.textContent.trim();
-    if (input !== '') {
-      commandHistory.push(input);
-      historyIndex = -1;
-      // ...handle the command here...
-      // For example:
-      // processCommand(input);
-    }
-    userInput.textContent = '';
-  }
-});
-
-// Helper to place caret at end of contenteditable
-function placeCaretAtEnd(el) {
-  el.focus();
-  if (typeof window.getSelection != "undefined"
-      && typeof document.createRange != "undefined") {
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel.removeAllRanges();
-    sel.addRange(range);
+    const data = await response.json();
+    fileSystemCache.set(path, data);
+    return data;
+  } catch (error) {
+    console.error(error);
+    return null;
   }
 }
 
-// Track if welcome message is currently shown
-let welcomeActive = true;
+// --- GitHub API Helper for Files ---
+async function getFileContent(path) {
+  if (fileSystemCache.has(path)) {
+    const cachedData = fileSystemCache.get(path);
+    // Ensure we're not returning directory data from cache
+    if (cachedData.content) {
+      try {
+        return atob(cachedData.content);
+      } catch (e) {
+        console.error('Error decoding cached content:', e);
+        return 'Error: Could not decode file content.';
+      }
+    }
+  }
+  try {
+    const response = await fetch(`https://api.github.com/repos/Peetzie/TestWebsite/contents${path}`);
+    if (!response.ok) {
+      return null; // File not found or other error
+    }
+    const data = await response.json();
+    if (data.type !== 'file' || !data.content) {
+      return null; // It's a directory or has no content
+    }
+    fileSystemCache.set(path, data); // Cache the raw response
+    return atob(data.content); // Decode base64 content
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
 
-// Function to reset the terminal to its initial state
+// Add the missing resetTerminal function and export it
 export function resetTerminal(terminal) {
-  welcomeActive = true;
-  terminal.innerHTML = ''; // Clear all content
-  showWelcomeMessage(terminal); // Show the welcome message
-  resetCommandHistory(); // Reset the command history
-  // Add the initial input line back
+  // Clear existing content
+  terminal.innerHTML = '';
+  
+  // Show the welcome message
+  showWelcomeMessage(terminal);
+  
+  // Reset command history
+  resetCommandHistory();
+  
+  // Reset directory state
+  currentDirectory = '/';
+  fileSystemCache.clear();
+  
+  // Create the initial prompt
   const prompt = document.createElement('div');
-  prompt.className = 'line';
-  prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
+  prompt.className = 'line prompt';
+  prompt.innerHTML = `
+    <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~${currentDirectory === '/' ? '' : currentDirectory}</span><span class="prompt-symbol">$</span>
+    <span id="user-input"></span><span class="cursor">|</span>
+  `;
   terminal.appendChild(prompt);
 }
 
-// Welcome message function
-export function showWelcomeMessage(terminal) {
-  welcomeActive = true;
-  const lines = [
-    '<span class="welcome-title">Welcome to Frederik Peetz Schou Larsen\'s Interactive Terminal!</span>',
-    '',
-    'This terminal lets you explore my professional journey, contact me, and find my profiles.',
-    'Type <span class="cmd">help</span> to see all available commands.',
-    '',
-    'You can use the up/down arrows to browse your command history, just like a real terminal.',
-    '',
-    'Feel free to look around, and thank you for visiting from LinkedIn, my CV, or elsewhere!'
-  ];
-  lines.forEach(line => {
-    const div = document.createElement('div');
-    div.className = 'line welcome-line';
-    div.innerHTML = line;
-    terminal.appendChild(div);
-  });
-}
-
-// Helper to clear only the welcome message
-function clearWelcomeMessage(terminal) {
-  const welcomeLines = terminal.querySelectorAll('.welcome-line');
-  welcomeLines.forEach(line => terminal.removeChild(line));
-  welcomeActive = false;
-}
-
-// Add this variable to track if we're awaiting a CV language selection
-let awaitingCVLang = false;
-
-// Process a terminal command and update the UI with appropriate output
-export function handleCommand(input, terminal) {
-
-  // Convert all input to lowercase for matching
-  const normalizedInput = input.trim().toLowerCase();
-
-  // If welcome message is active, clear it before processing the command
-  if (welcomeActive) {
-    clearWelcomeMessage(terminal);
-    welcomeActive = false;
-  }
-
-  // Handle CV language prompt (this must come before other commands)
-  if (awaitingCVLang) {
-    awaitingCVLang = false;
-    const response = document.createElement('div');
-    response.className = 'line';
-    if (normalizedInput === 'dk' || normalizedInput === 'danish') {
-      response.textContent = 'Downloading Danish CV...';
-      downloadFile('assets/CV_DK.pdf');
-    } else if (normalizedInput === 'eng' || normalizedInput === 'english') {
-      response.textContent = 'Downloading English CV...';
-      downloadFile('assets/CV_eng.pdf');
-    } else {
-      response.textContent = 'Invalid language selection. Please choose either ENG or DK.';
-    }
-    terminal.insertBefore(response, terminal.lastElementChild);
-    return { clear: false, handled: true };
-  }
+// Main command handler
+export async function handleCommand(input, terminal) {
+  const trimmedInput = input.trim();
+  const [command, ...args] = trimmedInput.split(' ');
+  const normalizedCommand = command.toLowerCase();
 
   // --- Main Command Switch ---
-  switch (normalizedInput) {
+  switch (normalizedCommand) {
+    case '.':
+      const repoResponse = document.createElement('div');
+      repoResponse.className = 'line';
+      repoResponse.textContent = `Opening directory '${currentDirectory}' in repository...`;
+      terminal.appendChild(repoResponse);
+      // Construct the URL based on the current directory
+      const repoUrl = `https://github.com/Peetzie/TestWebsite/tree/main${currentDirectory}`;
+      setTimeout(() => window.open(repoUrl, '_blank'), 700);
+      break;
+
+    case 'ls':
+      const contents = await getDirectoryContents(currentDirectory);
+      if (contents) {
+        contents.forEach(item => {
+          const itemLine = document.createElement('div');
+          itemLine.className = 'line';
+          if (item.type === 'dir') {
+            itemLine.innerHTML = `<span class="dir">${item.name}</span>`;
+          } else {
+            itemLine.textContent = item.name;
+          }
+          terminal.appendChild(itemLine);
+        });
+      } else {
+        const errorLine = document.createElement('div');
+        errorLine.className = 'line';
+        errorLine.textContent = 'Error: Could not list directory contents.';
+        terminal.appendChild(errorLine);
+      }
+      break;
+
+    case 'cat':
+      const fileName = args[0];
+      if (!fileName) {
+        const errorLine = document.createElement('div');
+        errorLine.className = 'line';
+        errorLine.textContent = 'cat: missing operand';
+        terminal.appendChild(errorLine);
+        break;
+      }
+
+      const filePath = currentDirectory === '/' ? `/${fileName}` : `${currentDirectory}/${fileName}`;
+      const fileContent = await getFileContent(filePath);
+
+      if (fileContent !== null) {
+        const contentPre = document.createElement('pre');
+        contentPre.className = 'line file-content';
+        contentPre.textContent = fileContent;
+        terminal.appendChild(contentPre);
+      } else {
+        const errorLine = document.createElement('div');
+        errorLine.className = 'line';
+        errorLine.textContent = `cat: ${fileName}: No such file or directory`;
+        terminal.appendChild(errorLine);
+      }
+      break;
+
+    case 'cd':
+      const targetDir = args[0] || '/';
+      let newPath;
+
+      if (targetDir === '..') {
+        newPath = currentDirectory.substring(0, currentDirectory.lastIndexOf('/')) || '/';
+      } else if (targetDir.startsWith('/')) {
+        newPath = targetDir;
+      } else {
+        newPath = currentDirectory === '/' ? `/${targetDir}` : `${currentDirectory}/${targetDir}`;
+      }
+
+      // Verify the new path is a directory
+      const parentPath = newPath.substring(0, newPath.lastIndexOf('/')) || '/';
+      const dirName = newPath.substring(newPath.lastIndexOf('/') + 1);
+      const parentContents = await getDirectoryContents(parentPath);
+      const targetIsDirectory = parentContents && parentContents.find(item => item.name === dirName && item.type === 'dir');
+
+      if (newPath === '/' || targetIsDirectory) {
+        currentDirectory = newPath;
+      } else {
+        const errorLine = document.createElement('div');
+        errorLine.className = 'line';
+        errorLine.textContent = `cd: no such file or directory: ${targetDir}`;
+        terminal.appendChild(errorLine);
+      }
+      break;
+
     case 'clear':
       terminal.innerHTML = '';
       const prompt = document.createElement('div');
-      prompt.className = 'line';
-      prompt.innerHTML = '$ <span id="user-input"></span><span class="cursor">▮</span>';
+      prompt.className = 'line prompt';
+      prompt.innerHTML = `
+        <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~${currentDirectory === '/' ? '' : currentDirectory}</span><span class="prompt-symbol">$</span>
+        <span id="user-input"></span><span class="cursor">|</span>
+      `;
       terminal.appendChild(prompt);
       return { clear: true }; // Special return for 'clear'
 
     case 'help':
-      const helpLines = [
-        'Available commands:', '',
-        '<span class="cmd">help</span>      <span class="cmd-desc">Show this help message</span>',
-        '<span class="cmd">clear</span>     <span class="cmd-desc">Clear the terminal</span>',
-        '<span class="cmd">about me</span>  <span class="cmd-desc">Learn about me and my background</span>',
-        '<span class="cmd">linkedin</span>  <span class="cmd-desc">Open my LinkedIn profile</span>',
-        '<span class="cmd">github</span>    <span class="cmd-desc">Open my GitHub profile</span>',
-        '<span class="cmd">email me</span>  <span class="cmd-desc">Open your email client to contact me</span>',
-        '<span class="cmd">journey</span>   <span class="cmd-desc">Show my professional journey</span>',
-        '<span class="cmd">cv</span>        <span class="cmd-desc">Download my resume (choose DK or ENG)</span>',
+      const commandList = [
+        { cmd: '.', desc: 'Open the source code repository from current directory' },
+        { cmd: 'about', desc: 'Learn about me and my background' },
+        { cmd: 'cat', desc: 'Display content of a file (e.g., cat README.md)' },
+        { cmd: 'cd', desc: 'Change directory (e.g., cd js, cd ..)' },
+        { cmd: 'clear', desc: 'Clear the terminal' },
+        { cmd: 'echo', desc: 'Print text to the terminal' },
+        { cmd: 'education', desc: 'Show my educational background' },
+        { cmd: 'email', desc: 'Open your email client to contact me' },
+        { cmd: 'github', desc: 'Open my GitHub profile' },
+        { cmd: 'help', desc: 'Show this help message' },
+        { cmd: 'history', desc: 'Show command history' },
+        { cmd: 'journey', desc: 'Show my professional journey' },
+        { cmd: 'linkedin', desc: 'Open my LinkedIn profile' },
+        { cmd: 'ls', desc: 'List directory contents' },
+        { cmd: 'pwd', desc: 'Print current working directory' },
+        { cmd: 'themes', desc: 'Change the terminal theme (coming soon)' },
+        { cmd: 'welcome', desc: 'Display the welcome message' },
+        { cmd: 'whoami', desc: 'Display the current user' },
       ];
-      helpLines.forEach(line => {
+
+      const title = document.createElement('div');
+      title.className = 'line';
+      title.textContent = 'Available commands:';
+      terminal.appendChild(title);
+      terminal.appendChild(document.createElement('br')); // For a blank line
+
+      commandList.forEach(({ cmd, desc }) => {
         const helpDiv = document.createElement('div');
-        helpDiv.className = 'line';
-        helpDiv.innerHTML = line;
-        terminal.insertBefore(helpDiv, terminal.lastElementChild);
+        helpDiv.className = 'line help-line';
+        helpDiv.innerHTML = `
+          <span class="cmd">${cmd}</span>
+          <span class="cmd-desc">* ${desc}</span>
+        `;
+        terminal.appendChild(helpDiv);
       });
       break;
 
     case 'about':
     case 'about me':
-      const age = calculateAge('1996-10-17');
-      const aboutText =
-        `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
-        `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
-        `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
-      typeAnimatedText(terminal, aboutText);
+      // Handle 'about me' as a special case
+      if (args.length > 0 && args[0].toLowerCase() === 'me') {
+        const age = calculateAge('1996-10-17');
+        const aboutText =
+          `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+          `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+          `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+        typeAnimatedText(terminal, aboutText);
+      } else {
+        const age = calculateAge('1996-10-17');
+        const aboutText =
+          `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+          `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+          `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+        typeAnimatedText(terminal, aboutText);
+      }
+      break;
+      
+    case 'echo':
+      const textToEcho = args.join(' ');
+      const echoLine = document.createElement('div');
+      echoLine.className = 'line';
+      echoLine.textContent = textToEcho;
+      terminal.appendChild(echoLine);
       break;
 
-    case 'linkedin':
-      const linkedInResponse = document.createElement('div');
-      linkedInResponse.className = 'line';
-      linkedInResponse.textContent = 'Opening LinkedIn profile...';
-      terminal.insertBefore(linkedInResponse, terminal.lastElementChild);
-      setTimeout(() => window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank'), 700);
+    case 'education':
+      const eduText = "I hold a B.Sc. in Software Technology and an M.Sc. in Human-Centered Artificial Intelligence, both from the Technical University of Denmark (DTU).";
+      typeAnimatedText(terminal, eduText);
       break;
 
-    case 'email me':
+    case 'email':
       const emailResponse = document.createElement('div');
       emailResponse.className = 'line';
       emailResponse.textContent = 'Opening your email client...';
-      terminal.insertBefore(emailResponse, terminal.lastElementChild);
+      terminal.appendChild(emailResponse);
       setTimeout(() => window.open('mailto:contact.pungent127@silomails.com', '_blank'), 900);
+      break;
+
+    case 'history':
+      commandHistory.forEach((cmd, index) => {
+        const historyLine = document.createElement('div');
+        historyLine.className = 'line';
+        historyLine.innerHTML = `<span style="color: var(--comment);">${index + 1}</span>&nbsp;&nbsp;${cmd}`;
+        terminal.appendChild(historyLine);
+      });
       break;
 
     case 'github':
       const githubResponse = document.createElement('div');
       githubResponse.className = 'line';
       githubResponse.textContent = 'Opening GitHub profile in a new window...';
-      terminal.insertBefore(githubResponse, terminal.lastElementChild);
+      terminal.appendChild(githubResponse);
       setTimeout(() => window.open('https://github.com/Peetzie', '_blank'), 1300);
       break;
 
     case 'journey':
-      showJourneyWindow();
+      const journeyWindow = document.getElementById('journey-window');
+      if (journeyWindow) journeyWindow.style.display = 'flex';
       break;
 
-    case 'cv':
-      const cvPrompt = document.createElement('div');
-      cvPrompt.className = 'line';
-      cvPrompt.innerHTML = 'Which version would you like? (<span class="cmd">DK</span> / <span class="cmd">ENG</span>)';
-      terminal.insertBefore(cvPrompt, terminal.lastElementChild);
-      awaitingCVLang = true;
+    case 'linkedin':
+      const linkedInResponse = document.createElement('div');
+      linkedInResponse.className = 'line';
+      linkedInResponse.textContent = 'Opening LinkedIn profile...';
+      terminal.appendChild(linkedInResponse);
+      setTimeout(() => window.open('https://www.linkedin.com/in/frederikpeetzschoularsen/', '_blank'), 700);
+      break;
+
+    case 'pwd':
+      const pwdLine = document.createElement('div');
+      pwdLine.className = 'line';
+      pwdLine.textContent = 'home/guest' + currentDirectory;
+      terminal.appendChild(pwdLine);
+      break;
+
+    case 'themes':
+      const themeLine = document.createElement('div');
+      themeLine.className = 'line';
+      themeLine.textContent = 'Theme switching functionality is coming soon!';
+      terminal.appendChild(themeLine);
+      break;
+
+    case 'welcome':
+      showWelcomeMessage(terminal);
+      break;
+
+    case 'whoami':
+      const whoamiLine = document.createElement('div');
+      whoamiLine.className = 'line';
+      whoamiLine.textContent = 'guest';
+      terminal.appendChild(whoamiLine);
       break;
 
     default:
+      // Handle multi-word commands that might have been missed
+      if (trimmedInput.toLowerCase() === 'about me') {
+        const age = calculateAge('1996-10-17');
+        const aboutText =
+          `I'm ${age} years old with a Bachelor in Software Technology and a Master's in Human-Centered AI focused on big data. ` +
+          `I have over a year of experience at PwC, working at the intersection of data science and IT audits (ISAE 3402/3000). ` +
+          `Based in Hedehusene, I enjoy running, cooking, and value an active social life.`;
+        typeAnimatedText(terminal, aboutText);
+        break;
+      }
       // Handle unknown commands
       const defaultResponse = document.createElement('div');
       defaultResponse.className = 'line';
-      defaultResponse.textContent = `Command not found: ${input}`;
-      terminal.insertBefore(defaultResponse, terminal.lastElementChild);
+      defaultResponse.textContent = `Command not found: ${trimmedInput}`;
+      terminal.appendChild(defaultResponse);
       break;
   }
 
-  return { clear: false }; // Default return
+  // --- Final Return ---
+  // Return the outcome and the current state of the directory
+  return { clear: false, currentDirectory };
 }
 
-function renderTimeline(events) {
-  const timeline = document.getElementById('timeline');
-  timeline.innerHTML = '';
-
-  // Add the horizontal center line
-  const centerLine = document.createElement('div');
-  centerLine.className = 'timeline-center-line';
-  timeline.appendChild(centerLine);
-
-  // Wait for the center line animation to finish before adding events
-  // The drawLine animation is 1.2s, so use setTimeout for 1.2s
-  setTimeout(() => {
-    events.forEach((event, i) => {
-      const eventDiv = document.createElement('div');
-      eventDiv.className = 'timeline-event ' + (i % 2 === 0 ? 'up' : 'down');
-      eventDiv.style.flex = '1 1 0';
-
-      // Vertical line from center line to circle
-      const vert = document.createElement('div');
-      vert.className = 'timeline-vert';
-      vert.style.animationDelay = `${i * 0.25}s`;
-
-      // Circle with only the main title by default
-      const circle = document.createElement('div');
-      circle.className = 'timeline-circle';
-      circle.innerHTML = `
-  <strong>${event.title}</strong>
-  <div class="circle-desc">${event.description}</div>
-`;
-      circle.querySelector('.circle-desc').style.display = 'none';
-
-      // Show description and enlarge on hover
-      circle.addEventListener('mouseenter', function() {
-        this.classList.add('enlarged');
-        this.querySelector('.circle-desc').style.display = 'block';
-      });
-      circle.addEventListener('mouseleave', function() {
-        this.classList.remove('enlarged');
-        this.querySelector('.circle-desc').style.display = 'none';
-      });
-
-      // Build event structure
-      if (i % 2 === 0) {
-        // Up: vertical line below, circle above
-        eventDiv.appendChild(circle);
-        eventDiv.appendChild(vert);
-      } else {
-        // Down: vertical line above, circle below
-        eventDiv.appendChild(vert);
-        eventDiv.appendChild(circle);
-      }
-
-      // Stagger the appearance of each event
-      eventDiv.style.opacity = '0';
-      eventDiv.style.transition = 'opacity 0.4s';
-
-      setTimeout(() => {
-        eventDiv.style.opacity = '1';
-      }, i * 250);
-
-      timeline.appendChild(eventDiv);
-    });
-  }, 1200); // Wait for center line animation (1.2s)
-}
-
-// Show the Journey window
-export function showJourneyWindow() {
-  if (journeyWindow) {
-    journeyWindow.style.display = 'block';
-
-    // Add animated timeline with your highlights
-    const journeyContent = journeyWindow.querySelector('.journey-content');
-    journeyContent.innerHTML = '<div class="timeline" id="timeline"></div>';
-    const events = [
-      {
-        title: 'Lidl \n September 2017 - September 2021',
-        description: 'Butiksassistent'
-      },
-      {
-        title: 'Københavns Kommune \n November 2021 - November 2022',
-        description: 'Teknisk Servicemedarbejder'
-      },
-      {
-        title: 'PwC Denmark \n March 2022 - October 2023',
-        description: 'Student Assistant IT'
-      },
-      {
-        title: 'PwC Denmark \n October 2023 - August 2024',
-        description: 'Student assistant | Risk assurance | Digital Trust'
-      },
-      {
-        title: 'PwC Denmark \n August 2024 - Present',
-        description: 'Full time consultant | Risk assurance | Digital trust | Data analytics & Assurance'
-      }
-    ];
-    renderTimeline(events);
-  }
-}
-
-// Hide the Journey window when close button is clicked
-if (journeyCloseBtn) {
-  journeyCloseBtn.addEventListener('click', () => {
-    journeyWindow.style.display = 'none';
-  });
-}
-
-// Helper function to trigger file download
-function downloadFile(url) {
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = url.split('/').pop();
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-// Helper function to calculate age from birthdate
-function calculateAge(birthdate) {
-  const birth = new Date(birthdate);
+// Helper function to calculate age
+function calculateAge(birthDateString) {
+  const birth = new Date(birthDateString);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
@@ -363,24 +355,4 @@ function calculateAge(birthdate) {
   }
   
   return age;
-}
-
-// Helper function to type text with animation
-function typeAnimatedText(terminal, text) {
-  const response = document.createElement('div');
-  response.className = 'line';
-  terminal.insertBefore(response, terminal.lastElementChild);
-  
-  let index = 0;
-  const typingSpeed = 30; // milliseconds per character
-  
-  function typeNextChar() {
-    if (index < text.length) {
-      response.textContent += text.charAt(index);
-      index++;
-      setTimeout(typeNextChar, typingSpeed);
-    }
-  }
-  
-  typeNextChar();
 }

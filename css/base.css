@@ -1,8 +1,27 @@
+/* Tokyo Night color palette */
+:root {
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+  --comment: #5c6370;
+  --red: #f7768e;
+  --orange: #ff9e64;
+  --yellow: #e0af68;
+  --green: #9ece6a;
+  --cyan: #7dcfff;
+  --blue: #7aa2f7;
+  --magenta: #bb9af7;
+  --black: #15161e;
+  --black-light: #414868;
+  --black-lighter: #2c2c2c;
+}
+
 body {
+  font-family: 'Fira Code', 'Consolas', 'Menlo', 'Monaco', monospace;
+  background-color: var(--background);
+  color: var(--foreground);
   margin: 0;
-  background-color: #1e1e1e;
-  font-family: 'Courier New', Courier, monospace;
-  height: 100vh;
+  padding: 0;
   overflow: hidden;
+  height: 100vh;
   position: relative;
 }

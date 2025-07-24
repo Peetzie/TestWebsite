@@ -1,13 +1,12 @@
 .title-bar {
   display: flex;
   align-items: center;
-  padding: 0.5rem;
-  background-color: #2c2c2c;
-  border-bottom: 1px solid #444;
+  padding: 8px;
+  background: var(--black);
+  cursor: default; /* Changed from 'move' to prevent drag indication */
   user-select: none;
-  cursor: grab;
+  height: 25px;
 }
-.title-bar:active { cursor: grabbing; }
 
 .dot {
   height: 12px;
@@ -16,8 +15,8 @@
   margin-right: 8px;
   display: inline-block;
 }
-.red    { background-color: #ff5f56; cursor: pointer; }
-.yellow { background-color: #ffbd2e; cursor: pointer; }
+.red    { display: none; } /* Hide close button */
+.yellow { display: none; } /* Hide minimize button */
 .green  { background-color: #27c93f; cursor: pointer; }
 
 .app-title {
@@ -27,43 +26,159 @@
 }
 
 .terminal {
-  padding: 1.5rem;
-  color: #00ff00;
-  font-size: 1.2rem;
+  flex: 1;
+  padding: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 1rem;
+  overflow-y: auto;
+  line-height: 1.4;
 }
 
-.line { margin-bottom: 0.5rem; }
-
-#hidden-input {
-  position: absolute;
-  top: -100px;
-  opacity: 0;
+/* Style for the new prompt structure */
+.prompt {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
-#user-input { display: inline; }
+.prompt-user {
+  color: var(--green);
+  font-weight: bold;
+}
+
+.prompt-host {
+  color: var(--foreground);
+}
+
+.prompt-dir {
+  color: var(--blue);
+  font-weight: bold;
+}
+
+.prompt-symbol {
+  color: var(--foreground);
+  margin-right: 0.5em;
+}
+
+.cursor {
+  display: inline-block;
+  font-weight: bold;
+  color: var(--foreground);
+  animation: blink 1s steps(1) infinite;
+  margin-left: 1px;
+}
 
 .cmd {
-  color: #4ec9b0;
+  color: var(--cyan);
   font-weight: bold;
-  font-family: monospace;
-  margin-right: 1em;
-  min-width: 90px;
-  display: inline-block;
 }
+
 .cmd-desc {
-  color: #d4d4d4;
-  font-family: monospace;
+  color: var(--comment);
 }
 
-.welcome-title {
-  color: #4ec9b0;
+/* New style for help command alignment */
+.help-line {
+  display: flex;
+  align-items: baseline;
+}
+
+.help-line .cmd {
+  flex: 0 0 120px; /* Give the command name a fixed width */
+  padding-right: 1rem;
+}
+
+.help-line .cmd-desc {
+  flex: 1;
+}
+
+.dir {
+  color: var(--blue);
   font-weight: bold;
-  font-size: 1.15em;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.5em;
-  display: block;
 }
 
-.welcome-line {
-  color: #00ff00;
+.file-content {
+  white-space: pre-wrap; /* Wrap long lines but preserve whitespace */
+  color: var(--foreground);
+  background-color: rgba(255, 255, 255, 0.05);
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.ascii-art {
+  color: var(--magenta);
+  font-size: 0.7rem;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+/* New styles for the welcome message layout */
+.welcome-container {
+  display: flex;
+  gap: 2rem; /* Space between the two columns */
+  align-items: flex-start;
+}
+
+.welcome-left {
+  flex-grow: 1;
+}
+
+.welcome-right {
+  color: var(--magenta);
+  font-size: 0.2rem; /* Use a tiny font to fit the large art */
+  line-height: 1;
+  flex-shrink: 0; /* Prevent the art from being squished */
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Custom Scrollbar for Terminal */
+.terminal::-webkit-scrollbar {
+  width: 10px;
+}
+
+.terminal::-webkit-scrollbar-track {
+  background: var(--black); /* Dark background for the track */
+}
+
+.terminal::-webkit-scrollbar-thumb {
+  background-color: var(--black-light); /* A lighter grey for the thumb */
+  border-radius: 10px;
+  border: 2px solid var(--black); /* Padding around thumb */
+}
+
+.terminal::-webkit-scrollbar-thumb:hover {
+  background-color: var(--comment); /* Lighter color on hover */
+}
+
+.window {
+  position: fixed;
+  background: #24283b; /* A slightly different dark blue/purple */
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--black-light);
+  overflow: hidden;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make the actual input field invisible but still focusable */
+#hidden-input {
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
 }

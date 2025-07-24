@@ -1,7 +1,7 @@
 import { handleCommand } from './terminal-logic.js';
 
 // Command history support
-let commandHistory = [];
+export let commandHistory = []; // Export the array
 let historyIndex = -1;
 
 // Export a function to reset the command history from other modules
@@ -12,25 +12,29 @@ export function resetCommandHistory() {
 
 // Initialize input handling for the terminal interface
 export function setupInput(hiddenInput, terminal) {
-  let userInputSpan = document.getElementById('user-input');
-
-  // Automatically focus hidden input when the user clicks anywhere on the document
-  document.addEventListener('click', (e) => {
-    // Only focus if the click is inside the terminal window
-    if (e.target.closest('.window')) {
+  // Focus the hidden input when the terminal is clicked
+  terminal.addEventListener('click', (e) => {
+    // Only focus if not clicking on a link or interactive element
+    if (!e.target.closest('a, button')) {
       hiddenInput.focus();
     }
   });
 
   // Update the visible user input span to reflect typed characters in real time
-  hiddenInput.addEventListener('input', (e) => {
-    userInputSpan.textContent = e.target.value;
+  hiddenInput.addEventListener('input', () => {
+    const userInputSpan = document.getElementById('user-input');
+    if (userInputSpan) {
+      userInputSpan.textContent = hiddenInput.value;
+    }
   });
 
-  // Handle keydown for arrows and Enter
-  hiddenInput.addEventListener('keydown', (e) => {
+  // Handle keydown for arrows and Enter - make the handler async
+  hiddenInput.addEventListener('keydown', async (e) => {
+    const userInputSpan = document.getElementById('user-input');
+
     // Up arrow: previous command
     if (e.key === 'ArrowUp') {
+      e.preventDefault();
       if (commandHistory.length === 0) return;
       if (historyIndex === -1) {
         historyIndex = commandHistory.length - 1;
@@ -38,17 +42,15 @@ export function setupInput(hiddenInput, terminal) {
         historyIndex--;
       }
       hiddenInput.value = commandHistory[historyIndex];
-      userInputSpan.textContent = hiddenInput.value;
-      // Move cursor to end
+      if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
       setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
-      e.preventDefault();
       return;
     }
 
     // Down arrow: next command or clear input
     if (e.key === 'ArrowDown') {
-      if (commandHistory.length === 0) return;
-      if (historyIndex === -1) return;
+      e.preventDefault();
+      if (commandHistory.length === 0 || historyIndex === -1) return;
       if (historyIndex < commandHistory.length - 1) {
         historyIndex++;
         hiddenInput.value = commandHistory[historyIndex];
@@ -56,42 +58,64 @@ export function setupInput(hiddenInput, terminal) {
         historyIndex = -1;
         hiddenInput.value = '';
       }
-      userInputSpan.textContent = hiddenInput.value;
+      if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
       setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
-      e.preventDefault();
       return;
     }
 
     // Enter: submit command
     if (e.key === 'Enter') {
+      e.preventDefault();
       const input = hiddenInput.value.trim();
 
-      // Process the input and check if the terminal should be cleared
-      const { clear } = handleCommand(input, terminal);
-
-      // Only echo the command if the terminal was NOT just cleared by handleCommand
-      if (!clear) {
-        const echoed = document.createElement('div');
-        echoed.className = 'line';
-        echoed.textContent = `$ ${input}`;
-        terminal.insertBefore(echoed, terminal.lastElementChild);
+      // Make the current input line static by removing its ID and cursor
+      if (userInputSpan) {
+        const oldCursor = userInputSpan.nextElementSibling;
+        if (oldCursor && oldCursor.classList.contains('cursor')) {
+          oldCursor.remove(); // Remove the old cursor
+        }
+        userInputSpan.removeAttribute('id');
       }
 
-      // Add to history if not empty
+      // Only process a command if the input is not empty
       if (input !== '') {
+        // Await the command handler to get the result and new directory
+        const { clear, currentDirectory } = await handleCommand(input, terminal);
+
+        // If the command was 'clear', it handles its own new prompt.
+        if (clear) {
+          commandHistory.push(input);
+          historyIndex = -1;
+          hiddenInput.value = '';
+          terminal.scrollTop = terminal.scrollHeight;
+          return; // Stop here
+        }
+        
         commandHistory.push(input);
-        historyIndex = -1;
+        // After processing, create the new prompt with the updated directory
+        createNewPrompt(terminal, currentDirectory);
+      } else {
+        // For empty commands, get the last directory and create a new prompt
+        const lastPromptDir = terminal.querySelector('.line.prompt:last-child .prompt-dir');
+        const currentDirText = lastPromptDir ? lastPromptDir.textContent : '~';
+        createNewPrompt(terminal, currentDirText.replace('~', '/').replace('//', '/'));
       }
 
-      // If command cleared the terminal, reconnect the span reference for input
-      if (clear) {
-        userInputSpan = document.getElementById('user-input');
-      }
-
-      // Reset the hidden input and clear the visible span
+      historyIndex = -1; // Reset history index
       hiddenInput.value = '';
-      userInputSpan.textContent = '';
-      e.preventDefault();
+      terminal.scrollTop = terminal.scrollHeight;
     }
   });
+}
+
+// Helper function to create a new prompt line
+function createNewPrompt(terminal, path) {
+  const newPrompt = document.createElement('div');
+  newPrompt.className = 'line prompt';
+  const dirText = `~${path === '/' ? '' : path}`;
+  newPrompt.innerHTML = `
+      <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">${dirText}</span><span class="prompt-symbol">$</span>
+      <span id="user-input"></span><span class="cursor">|</span>
+    `;
+  terminal.appendChild(newPrompt);
 }

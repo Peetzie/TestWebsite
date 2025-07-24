@@ -27,13 +27,15 @@
 
   <div class="window">
     <div class="title-bar">
-      <span class="dot red" id="close-btn"></span>
-      <span class="dot yellow" id="minimize-btn"></span>
       <span class="dot green" id="maximize-btn"></span>
-      <span class="app-title">🧪 Data Terminal</span>
+      <span class="app-title">
+      &lt;/&gt; Terminal</span>
     </div>
     <div class="terminal" id="terminal">
-      <div class="line">$ <span id="user-input"></span><span class="cursor">▮</span></div>
+      <div class="line prompt">
+        <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~</span><span class="prompt-symbol">$</span>
+        <span id="user-input"></span><span class="cursor">▮</span>
+      </div>
     </div>
     <input type="text" id="hidden-input" autofocus autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
   </div>
@@ -51,8 +53,7 @@
     </div>
   </div>
 
-  <!-- Floating reopen icon -->
-  <div id="reopen-icon" title="Open Terminal">💻</div>
+  <!-- Floating reopen icon (removed) -->
   <!-- Modular JS entry point -->
   <script type="module" src="js/main.js"></script>
 </body>
