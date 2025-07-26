@@ -19,7 +19,8 @@ export function resetCommandHistory() {
 function createPromptHTML(currentDirectory, includeInput = true) {
   const dirDisplay = currentDirectory === '/' ? '~' : `~${currentDirectory}`;
   const inputSpan = includeInput ? '<span id="user-input"></span><span class="cursor">|</span>' : '';
-  return `<span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$ </span>${inputSpan}`;
+  // The space is now outside the span, right before the input area
+  return `<span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$</span> ${inputSpan}`;
 }
 
 // Initialize input handling for the terminal interface

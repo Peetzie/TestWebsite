@@ -162,8 +162,7 @@ export function resetTerminal(terminal) {
   const prompt = document.createElement('div');
   prompt.className = 'line prompt';
   prompt.innerHTML = `
-    <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~</span><span class="prompt-symbol">$</span>
-    <span id="user-input"></span><span class="cursor">|</span>
+    <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$</span> <span id="user-input"></span><span class="cursor">|</span>
   `;
   terminal.appendChild(prompt);
 }
@@ -293,7 +292,7 @@ export async function handleCommand(input, terminal) {
       prompt.className = 'line prompt';
       const dirDisplay = currentDirectory === '/' ? '~' : `~${currentDirectory}`;
       prompt.innerHTML = `
-        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
+        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$</span> <span id="user-input"></span><span class="cursor">|</span>
       `;
       terminal.appendChild(prompt);
       return { clear: true };

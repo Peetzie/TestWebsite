@@ -230,6 +230,6 @@
 
 /* Fix user input spacing */
 #user-input {
-  margin-left: 2px; /* Add small space for user input */
-  min-width: 1px; /* Ensure span is visible even when empty */
+  margin-left: 8.5px; /* Add small space for user input */
+  min-width: 2px; /* Ensure span is visible even when empty */
 }
