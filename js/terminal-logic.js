@@ -15,7 +15,6 @@ export const commandList = [
   { cmd: 'github', desc: 'Open my GitHub profile' },
   { cmd: 'help', desc: 'Show this help message' },
   { cmd: 'history', desc: 'Show command history' },
-  { cmd: 'journey', desc: 'Show my professional journey' },
   { cmd: 'linkedin', desc: 'Open my LinkedIn profile' },
   { cmd: 'ls', desc: 'List directory contents' },
   { cmd: 'pwd', desc: 'Print current working directory' },
@@ -228,7 +227,7 @@ export async function handleCommand(input, terminal) {
       tipContainer.style.marginTop = '1em'; // Add some space before the tips
       tipContainer.innerHTML = `
         <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+L</span> to clear the terminal screen.</div>
-        <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+A</span> to autocomplete commands.</div>
+        <div class="line pro-tip">✨ Pro-Tip: Use <span class="cmd">Ctrl+U</span> to autocomplete commands.</div>
       `;
       terminal.appendChild(tipContainer);
       
@@ -249,11 +248,6 @@ export async function handleCommand(input, terminal) {
       githubResponse.textContent = 'Opening GitHub profile in a new window...';
       terminal.appendChild(githubResponse);
       setTimeout(() => window.open('https://github.com/Peetzie', '_blank'), 1300);
-      break;
-
-    case 'journey':
-      const journeyWindow = document.getElementById('journey-window');
-      if (journeyWindow) journeyWindow.style.display = 'flex';
       break;
 
     case 'linkedin':
@@ -287,6 +281,72 @@ export async function handleCommand(input, terminal) {
       whoamiLine.className = 'line';
       whoamiLine.textContent = 'guest';
       terminal.appendChild(whoamiLine);
+      break;
+
+    case 'about':
+      const age = calculateAge('1996-10-17');
+      const aboutText = 
+        `👋 Hey there! I'm a ${age}-year-old tech enthusiast from Denmark\n` +
+        `🎓 I hold a Bachelor's in Software Technology and recently completed my Master's in Human-Centered AI with a focus on big data analytics.\n\n` +
+        `💼 Currently working at PwC for over a year, specializing in the intersection of data science and IT auditing (ISAE 3402/3000). I love bridging the gap between complex data insights and practical business solutions! 📊\n\n` +
+        `🏠 Based in Hedehusene, when I'm not coding or crunching data, you'll find me:\n` +
+        `🏃‍♂️ Running through scenic Danish landscapes\n` +
+        `👨‍🍳 Experimenting with new recipes in the kitchen\n` +
+        `🍻 Enjoying good times with friends and family\n\n` +
+        `💡 Always curious about emerging tech and passionate about creating meaningful digital experiences! ✨`;
+      
+      const aboutLine = document.createElement('pre');
+      aboutLine.className = 'line';
+      aboutLine.style.whiteSpace = 'pre-wrap';
+      aboutLine.style.lineHeight = '1.6';
+      aboutLine.textContent = aboutText;
+      terminal.appendChild(aboutLine);
+      break;
+
+    case 'education':
+      const educationText = 
+        `🎓 Educational Journey:\n\n` +
+        `🎯 Master of Science in Human-Centered AI (2023-2024) 🤖\n` +
+        `   📍 Specialization: Big Data Analytics\n` +
+        `   📝 Thesis: Relationship Extraction using Large Language Models\n` +
+        `   🔍 Focus Areas: Neural Networks, ML Ops, Image & Video Analysis\n` +
+        `   🛠️ Technologies: PyTorch, PyTorch Lightning, HuggingFace, Weights & Biases, Python\n` +
+        `   💡 Bridging the gap between AI research and practical applications\n\n` +
+        `💻 Bachelor of Science in Software Technology (2020-2023) 🚀\n` +
+        `   📍 Foundation: Full-stack development & system architecture\n` +
+        `   🛠️ Technologies: Java, Python, JavaScript, SQL databases\n` +
+        `   🔐 Bachelor Project: Cybersecurity-focused local HaveIBeenPwned implementation\n` +
+        `   🏗️ Tech Stack: Java with Maven, Redis, SQL databases\n\n` +
+        `📚 Continuous Learning & Professional Development:\n` +
+        `   🤖 Advanced machine learning techniques\n` +
+        `   📊 PowerBI for business intelligence & data visualization\n` +
+        `   🔧 Alteryx for data preparation and analytics\n` +
+        `   ☁️ Databricks for large-scale data processing\n` +
+        `   🔐 Cybersecurity frameworks and audit methodologies\n\n` +
+        `🏆 Always expanding expertise to tackle complex data challenges! 🌟`;
+      
+      const educationLine = document.createElement('pre');
+      educationLine.className = 'line';
+      educationLine.style.whiteSpace = 'pre-wrap';
+      educationLine.style.lineHeight = '1.6';
+      educationLine.textContent = educationText;
+      terminal.appendChild(educationLine);
+      break;
+
+    case 'email':
+      const emailResponse = document.createElement('div');
+      emailResponse.className = 'line';
+      emailResponse.textContent = 'Opening email client...';
+      terminal.appendChild(emailResponse);
+      setTimeout(() => window.open('mailto:your.email@example.com', '_blank'), 700);
+      break;
+
+    case 'echo':
+      const echoText = args.join(' ');
+      const echoLine = document.createElement('div');
+      echoLine.className = 'line';
+      echoLine.textContent = echoText || '';
+      terminal.appendChild(echoLine);
       break;
 
     default:

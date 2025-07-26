@@ -33,7 +33,7 @@ export function setupInput(hiddenInput, terminal) {
     const userInputSpan = document.getElementById('user-input');
 
     // Autocomplete with Ctrl+A
-    if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+    if (e.ctrlKey && e.key.toLowerCase() === 'u') {
       e.preventDefault();
       const currentInput = hiddenInput.value.trim();
       if (!currentInput) return;
