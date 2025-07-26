@@ -1,4 +1,4 @@
-import { handleCommand, commandList, getAutocompleteSuggestions } from './terminal-logic.js';
+import { handleCommand, commandList, getAutocompleteSuggestions, getCurrentDirectory } from './terminal-logic.js';
 
 // Command history support
 export let commandHistory = []; // Export the array
@@ -13,6 +13,13 @@ let autocompleteBaseInput = '';
 export function resetCommandHistory() {
   commandHistory = [];
   historyIndex = -1;
+}
+
+// Helper function to create prompt with current directory
+function createPromptHTML(currentDirectory, includeInput = true) {
+  const dirDisplay = currentDirectory === '/' ? '~' : `~${currentDirectory}`;
+  const inputSpan = includeInput ? '<span id="user-input"></span><span class="cursor">|</span>' : '';
+  return `<span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$ </span>${inputSpan}`;
 }
 
 // Initialize input handling for the terminal interface
@@ -72,9 +79,7 @@ export function setupInput(hiddenInput, terminal) {
       terminal.innerHTML = '';
       const prompt = document.createElement('div');
       prompt.className = 'line prompt';
-      prompt.innerHTML = `
-        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
-      `;
+      prompt.innerHTML = createPromptHTML(getCurrentDirectory());
       terminal.appendChild(prompt);
       hiddenInput.value = '';
       
@@ -142,7 +147,7 @@ export function setupInput(hiddenInput, terminal) {
         // Create command echo for all other commands
         const commandEcho = document.createElement('div');
         commandEcho.className = 'line';
-        commandEcho.innerHTML = `<span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span>${command}`;
+        commandEcho.innerHTML = createPromptHTML(getCurrentDirectory(), false) + command;
         
         // Insert before current prompt
         const currentPrompt = userInputSpan.closest('.prompt');
@@ -173,9 +178,7 @@ export function setupInput(hiddenInput, terminal) {
         // Create new prompt with consistent spacing
         const newPrompt = document.createElement('div');
         newPrompt.className = 'line prompt';
-        newPrompt.innerHTML = `
-          <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
-        `;
+        newPrompt.innerHTML = createPromptHTML(getCurrentDirectory());
         terminal.appendChild(newPrompt);
 
         // Clear input
@@ -211,28 +214,31 @@ export function setupInput(hiddenInput, terminal) {
   }
 
   function startNewAutocompleteSession(currentInput, hiddenInput, userInputSpan, terminal) {
-    const suggestions = getAutocompleteSuggestions(currentInput);
-    
-    if (suggestions.length === 0) {
-      // No matches
-      showNoMatchesMessage(terminal, userInputSpan);
-      return;
-    }
+    // Make this async to handle GitHub API calls for file completion
+    (async () => {
+      const suggestions = await getAutocompleteSuggestions(currentInput);
+      
+      if (suggestions.length === 0) {
+        // No matches
+        showNoMatchesMessage(terminal, userInputSpan);
+        return;
+      }
 
-    // Initialize autocomplete session
-    autocompleteSuggestions = suggestions;
-    autocompleteIndex = 0;
-    autocompleteBaseInput = getBaseInput(currentInput);
+      // Initialize autocomplete session
+      autocompleteSuggestions = suggestions;
+      autocompleteIndex = 0;
+      autocompleteBaseInput = getBaseInput(currentInput);
 
-    if (suggestions.length === 1) {
-      // Single match: complete it immediately
-      applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
-      resetAutocompleteState(); // Reset since we completed
-    } else {
-      // Multiple matches: show first one and display all options
-      applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
-      showCompletionOptions(terminal, userInputSpan, suggestions, 0);
-    }
+      if (suggestions.length === 1) {
+        // Single match: complete it immediately
+        applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
+        resetAutocompleteState(); // Reset since we completed
+      } else {
+        // Multiple matches: show first one and display all options
+        applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
+        showCompletionOptions(terminal, userInputSpan, suggestions, 0);
+      }
+    })();
   }
 
   function cycleToNextSuggestion(hiddenInput, userInputSpan) {

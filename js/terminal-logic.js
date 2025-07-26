@@ -2,36 +2,11 @@ import { showWelcomeMessage, typeAnimatedText } from './terminal-ui.js';
 import { resetCommandHistory, commandHistory } from './terminal-events.js';
 import { themes, getCurrentTheme, setTheme, getThemesList } from './theme-manager.js';
 
-// File system structure for autocomplete
-export const fileSystem = {
-  '/': {
-    'README.md': 'file',
-    'package.json': 'file',
-    'css/': 'directory',
-    'js/': 'directory',
-    'assets/': 'directory'
-  },
-  '/css/': {
-    'base.css': 'file',
-    'terminal.css': 'file',
-    'layout.css': 'file',
-    'animations.css': 'file'
-  },
-  '/js/': {
-    'main.js': 'file',
-    'terminal-logic.js': 'file',
-    'terminal-ui.js': 'file',
-    'terminal-events.js': 'file',
-    'theme-manager.js': 'file'
-  },
-  '/assets/': {
-    'images/': 'directory',
-    'docs/': 'directory'
-  }
-};
+// Dynamic file system cache for autocomplete - populated from GitHub API
+export const fileSystemStructure = new Map();
 
 // Get autocomplete suggestions for commands and files
-export function getAutocompleteSuggestions(input) {
+export async function getAutocompleteSuggestions(input) {
   const parts = input.trim().split(' ');
   const command = parts[0].toLowerCase();
   const arg = parts[1] || '';
@@ -46,11 +21,11 @@ export function getAutocompleteSuggestions(input) {
   if (parts.length === 2) {
     switch (command) {
       case 'cat':
-        return getFileCompletions(arg);
+        return await getFileCompletions(arg);
       case 'themes':
         return getThemeCompletions(arg);
       case 'cd':
-        return getDirectoryCompletions(arg);
+        return await getDirectoryCompletions(arg);
       default:
         return [];
     }
@@ -59,9 +34,13 @@ export function getAutocompleteSuggestions(input) {
   return [];
 }
 
-function getFileCompletions(partial) {
-  const files = Object.keys(fileSystem[currentDirectory] || {});
-  return files.filter(f => f.startsWith(partial) && fileSystem[currentDirectory][f] === 'file');
+async function getFileCompletions(partial) {
+  const contents = await getDirectoryContents(currentDirectory);
+  if (!contents) return [];
+  
+  return contents
+    .filter(item => item.type === 'file' && item.name.startsWith(partial))
+    .map(item => item.name);
 }
 
 function getThemeCompletions(partial) {
@@ -69,9 +48,20 @@ function getThemeCompletions(partial) {
   return themeKeys.filter(t => t.startsWith(partial));
 }
 
-function getDirectoryCompletions(partial) {
-  const items = Object.keys(fileSystem[currentDirectory] || {});
-  return items.filter(f => f.startsWith(partial) && fileSystem[currentDirectory][f] === 'directory');
+async function getDirectoryCompletions(partial) {
+  const contents = await getDirectoryContents(currentDirectory);
+  if (!contents) return [];
+  
+  const directories = contents
+    .filter(item => item.type === 'dir' && item.name.startsWith(partial))
+    .map(item => item.name);
+  
+  // Add special '..' completion if not in root
+  if (currentDirectory !== '/' && '..'.startsWith(partial)) {
+    directories.unshift('..');
+  }
+  
+  return directories;
 }
 
 // Centralized command list for help and autocomplete
@@ -97,6 +87,11 @@ export const commandList = [
 
 let currentDirectory = '/'; // Initial directory
 const fileSystemCache = new Map(); // Cache for API responses
+
+// Export current directory getter
+export function getCurrentDirectory() {
+  return currentDirectory;
+}
 
 // --- GitHub API Helper ---
 async function getDirectoryContents(path) {
@@ -167,7 +162,7 @@ export function resetTerminal(terminal) {
   const prompt = document.createElement('div');
   prompt.className = 'line prompt';
   prompt.innerHTML = `
-    <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~${currentDirectory === '/' ? '' : currentDirectory}</span><span class="prompt-symbol">$</span>
+    <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~</span><span class="prompt-symbol">$</span>
     <span id="user-input"></span><span class="cursor">|</span>
   `;
   terminal.appendChild(prompt);
@@ -222,28 +217,44 @@ export async function handleCommand(input, terminal) {
         
         const tipDiv = document.createElement('div');
         tipDiv.className = 'line pro-tip';
-        tipDiv.innerHTML = `💡 Try: <span class="cmd">cat README.md</span> or <span class="cmd">cat package.json</span>`;
+        tipDiv.innerHTML = `💡 Try: <span class="cmd">cat README.md</span> or <span class="cmd">ls</span> to see available files`;
         terminal.appendChild(tipDiv);
         break;
       }
 
-      // Check if file exists in current directory
-      const currentFiles = fileSystem[currentDirectory] || {};
-      if (currentFiles[filename] === 'file') {
-        // Display file content based on filename
-        displayFileContent(terminal, filename);
+      // Construct the full file path
+      const filePath = currentDirectory === '/' ? `/${filename}` : `${currentDirectory}/${filename}`;
+      
+      // Fetch file content from GitHub API
+      const fileContent = await getFileContent(filePath);
+      
+      if (fileContent !== null) {
+        const fileDiv = document.createElement('pre');
+        fileDiv.className = 'line file-content';
+        fileDiv.style.whiteSpace = 'pre-wrap';
+        fileDiv.style.color = 'var(--foreground)';
+        fileDiv.style.marginLeft = '0';
+        fileDiv.style.fontFamily = 'inherit';
+        fileDiv.style.maxHeight = '400px';
+        fileDiv.style.overflow = 'auto';
+        fileDiv.textContent = fileContent;
+        terminal.appendChild(fileDiv);
       } else {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'line';
-        errorDiv.innerHTML = `❌ File '<span class="cmd">${filename}</span>' not found in current directory.`;
+        errorDiv.innerHTML = `❌ File '<span class="cmd">${filename}</span>' not found or cannot be read.`;
         terminal.appendChild(errorDiv);
         
-        const availableFiles = Object.keys(currentFiles).filter(f => currentFiles[f] === 'file');
-        if (availableFiles.length > 0) {
-          const tipDiv = document.createElement('div');
-          tipDiv.className = 'line pro-tip';
-          tipDiv.innerHTML = `💡 Available files: ${availableFiles.map(f => `<span class="cmd">${f}</span>`).join(', ')}`;
-          terminal.appendChild(tipDiv);
+        // Show available files in current directory
+        const contents = await getDirectoryContents(currentDirectory);
+        if (contents) {
+          const availableFiles = contents.filter(item => item.type === 'file').map(item => item.name);
+          if (availableFiles.length > 0) {
+            const tipDiv = document.createElement('div');
+            tipDiv.className = 'line pro-tip';
+            tipDiv.innerHTML = `💡 Available files: ${availableFiles.map(f => `<span class="cmd">${f}</span>`).join(', ')}`;
+            terminal.appendChild(tipDiv);
+          }
         }
       }
       break;
@@ -280,8 +291,9 @@ export async function handleCommand(input, terminal) {
       terminal.innerHTML = '';
       const prompt = document.createElement('div');
       prompt.className = 'line prompt';
+      const dirDisplay = currentDirectory === '/' ? '~' : `~${currentDirectory}`;
       prompt.innerHTML = `
-        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
+        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">${dirDisplay}</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
       `;
       terminal.appendChild(prompt);
       return { clear: true };
@@ -342,7 +354,7 @@ export async function handleCommand(input, terminal) {
     case 'pwd':
       const pwdLine = document.createElement('div');
       pwdLine.className = 'line';
-      pwdLine.textContent = 'home/guest' + currentDirectory;
+      pwdLine.textContent = `/home/guest${currentDirectory === '/' ? '' : currentDirectory}`;
       terminal.appendChild(pwdLine);
       break;
 
@@ -517,61 +529,4 @@ function calculateAge(birthDateString) {
   }
   
   return age;
-}
-
-function displayFileContent(terminal, filename) {
-  const fileContents = {
-    'README.md': `# 🚀 Terminal Portfolio
-
-Welcome to my interactive terminal portfolio! This project showcases my skills and experience through a terminal-style interface.
-
-## 🎨 Themes
-- **Catppuccin Mocha** (Default) - Dark theme with rich colors
-- **Gruvbox** - Retro theme with warm earth tones  
-- **Matrix** - Classic green-on-black style
-- **Catppuccin Latte** - Light theme for daytime use
-
-## 🛠️ Technologies Used
-- **Frontend**: HTML5, CSS3, JavaScript (ES6 modules)
-- **Styling**: CSS custom properties for theming
-- **Architecture**: Modular design with separation of concerns
-
-## 📝 Available Commands
-Type \`help\` to see all available commands!`,
-
-    'package.json': `{
-  "name": "terminal-portfolio",
-  "version": "1.0.0",
-  "description": "Interactive terminal-style portfolio",
-  "main": "index.html",
-  "scripts": {
-    "start": "echoport",
-    "dev": "live-server"
-  },
-  "keywords": ["portfolio", "terminal", "javascript", "css"],
-  "author": "Frederik Peetz Schou Larsen",
-  "license": "MIT"
-}`,
-
-    'base.css': `/* Base CSS with theme system */
-/* Contains color variables for all themes */
-/* Catppuccin Mocha (default), Gruvbox, Matrix, Catppuccin Latte */`,
-
-    'terminal.css': `/* Terminal-specific styling */
-/* Prompt colors, scrollbar, window styling */`,
-
-    'main.js': `/* Main entry point */
-/* Initializes terminal UI and loads saved theme */`
-  };
-
-  const content = fileContents[filename] || `Content of ${filename}`;
-  
-  const fileDiv = document.createElement('pre');
-  fileDiv.className = 'line file-content';
-  fileDiv.style.whiteSpace = 'pre-wrap';
-  fileDiv.style.color = 'var(--foreground)';
-  fileDiv.style.marginLeft = '0';
-  fileDiv.style.fontFamily = 'inherit';
-  fileDiv.textContent = content;
-  terminal.appendChild(fileDiv);
 }
