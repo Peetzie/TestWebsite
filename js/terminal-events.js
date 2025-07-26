@@ -1,8 +1,13 @@
-import { handleCommand, commandList } from './terminal-logic.js';
+import { handleCommand, commandList, getAutocompleteSuggestions } from './terminal-logic.js';
 
 // Command history support
 export let commandHistory = []; // Export the array
-let historyIndex = -1;
+let historyIndex = -1;   
+
+// Autocomplete cycling state
+let autocompleteSuggestions = [];
+let autocompleteIndex = -1;
+let autocompleteBaseInput = '';
 
 // Export a function to reset the command history from other modules
 export function resetCommandHistory() {
@@ -22,140 +27,287 @@ export function setupInput(hiddenInput, terminal) {
 
   // Update the visible user input span to reflect typed characters in real time
   hiddenInput.addEventListener('input', () => {
+    // Always get the current user input span (in case DOM changed)
     const userInputSpan = document.getElementById('user-input');
     if (userInputSpan) {
-      userInputSpan.textContent = hiddenInput.value;
+      userInputSpan.textContent = hiddenInput.value; // REMOVE THE EXTRA " " + 
     }
+    
+    // Reset autocomplete state when user types
+    resetAutocompleteState();
   });
 
   // Handle keydown for arrows and Enter - make the handler async
   hiddenInput.addEventListener('keydown', async (e) => {
     const userInputSpan = document.getElementById('user-input');
 
-    // Autocomplete with Ctrl+A
+    // Enhanced autocomplete with Ctrl+U cycling
     if (e.ctrlKey && e.key.toLowerCase() === 'u') {
       e.preventDefault();
       const currentInput = hiddenInput.value.trim();
       if (!currentInput) return;
 
-      const allCommands = commandList.map(c => c.cmd);
-      const matches = allCommands.filter(c => c.startsWith(currentInput.toLowerCase()));
-
-      if (matches.length === 1) {
-        // Single match: complete it
-        hiddenInput.value = matches[0] + ' ';
-        if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
-        setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
-      } else if (matches.length > 1) {
-        // Multiple matches: display them
-        const suggestionsDiv = document.createElement('div');
-        suggestionsDiv.className = 'line completion-suggestions';
-        suggestionsDiv.textContent = matches.join('   ');
-        
-        const currentPrompt = userInputSpan.closest('.prompt');
-        if (currentPrompt) {
-          currentPrompt.insertAdjacentElement('beforebegin', suggestionsDiv);
-        } else {
-          terminal.appendChild(suggestionsDiv);
-        }
-        terminal.scrollTop = terminal.scrollHeight;
+      // Check if we're continuing an autocomplete session
+      if (autocompleteSuggestions.length > 0 && autocompleteBaseInput === getBaseInput(currentInput)) {
+        // Cycle to next suggestion
+        cycleToNextSuggestion(hiddenInput, userInputSpan);
+      } else {
+        // Start new autocomplete session
+        startNewAutocompleteSession(currentInput, hiddenInput, userInputSpan, terminal);
       }
       return;
     }
 
-    // Ctrl+L: Clear the terminal
+    // Reset autocomplete on any other key
+    if (!e.ctrlKey || e.key.toLowerCase() !== 'u') {
+      resetAutocompleteState();
+    }
+
+    // Clear screen shortcut
     if (e.ctrlKey && e.key.toLowerCase() === 'l') {
       e.preventDefault();
-      // We can directly call handleCommand to clear the screen
-      await handleCommand('clear', terminal);
-      hiddenInput.value = ''; // Also clear the hidden input
+      
+      // Reset autocomplete state first
+      resetAutocompleteState();
+      
+      terminal.innerHTML = '';
+      const prompt = document.createElement('div');
+      prompt.className = 'line prompt';
+      prompt.innerHTML = `
+        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
+      `;
+      terminal.appendChild(prompt);
+      hiddenInput.value = '';
+      
+      const userInputSpan = document.getElementById('user-input');
+      if (userInputSpan) userInputSpan.textContent = '';
+      
+      hiddenInput.focus();
       return;
     }
 
-    // Up arrow: previous command
+    // History navigation (up/down arrows)
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      if (commandHistory.length === 0) return;
-      if (historyIndex === -1) {
-        historyIndex = commandHistory.length - 1;
-      } else if (historyIndex > 0) {
-        historyIndex--;
-      }
-      hiddenInput.value = commandHistory[historyIndex];
-      if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
-      setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
-      return;
-    }
-
-    // Down arrow: next command or clear input
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (commandHistory.length === 0 || historyIndex === -1) return;
-      if (historyIndex < commandHistory.length - 1) {
+      if (commandHistory.length > 0 && historyIndex < commandHistory.length - 1) {
         historyIndex++;
-        hiddenInput.value = commandHistory[historyIndex];
-      } else {
+        const historicalCommand = commandHistory[commandHistory.length - 1 - historyIndex];
+        hiddenInput.value = historicalCommand;
+        if (userInputSpan) userInputSpan.textContent = historicalCommand;
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        historyIndex--;
+        const historicalCommand = commandHistory[commandHistory.length - 1 - historyIndex];
+        hiddenInput.value = historicalCommand;
+        if (userInputSpan) userInputSpan.textContent = historicalCommand;
+      } else if (historyIndex === 0) {
         historyIndex = -1;
         hiddenInput.value = '';
+        if (userInputSpan) userInputSpan.textContent = '';
       }
-      if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
-      setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
+    }
+
+    // Enter key - execute command
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Clear any autocomplete displays before executing command
+      resetAutocompleteState();
+      
+      const command = hiddenInput.value.trim();
+      
+      if (command) {
+        // Add to history
+        commandHistory.push(command);
+        historyIndex = -1;
+
+        // Special handling for clear command - don't show command echo
+        if (command.toLowerCase() === 'clear') {
+          // Just execute the command without showing it
+          try {
+            const result = await handleCommand(command, terminal);
+            if (result && result.clear) {
+              // Clear was successful, don't add new prompt
+              hiddenInput.value = '';
+              hiddenInput.focus();
+              return;
+            }
+          } catch (error) {
+            console.error('Command execution error:', error);
+          }
+          return;
+        }
+
+        // Create command echo for all other commands
+        const commandEcho = document.createElement('div');
+        commandEcho.className = 'line';
+        commandEcho.innerHTML = `<span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span>${command}`;
+        
+        // Insert before current prompt
+        const currentPrompt = userInputSpan.closest('.prompt');
+        if (currentPrompt) {
+          currentPrompt.insertAdjacentElement('beforebegin', commandEcho);
+          // Remove the old prompt completely
+          currentPrompt.remove();
+        } else {
+          terminal.appendChild(commandEcho);
+        }
+
+        // Execute command
+        try {
+          const result = await handleCommand(command, terminal);
+          if (result && result.clear) {
+            // If clear was called, don't add a new prompt
+            return;
+          }
+        } catch (error) {
+          console.error('Command execution error:', error);
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'line';
+          errorDiv.style.color = 'var(--red)';
+          errorDiv.textContent = 'Error executing command.';
+          terminal.appendChild(errorDiv);
+        }
+
+        // Create new prompt with consistent spacing
+        const newPrompt = document.createElement('div');
+        newPrompt.className = 'line prompt';
+        newPrompt.innerHTML = `
+          <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
+        `;
+        terminal.appendChild(newPrompt);
+
+        // Clear input
+        hiddenInput.value = '';
+        
+        // Scroll to bottom
+        terminal.scrollTop = terminal.scrollHeight;
+        
+        // Ensure focus stays on hidden input
+        hiddenInput.focus();
+      }
+    }
+  });
+
+  // Helper functions for autocomplete cycling
+  function showCompletionOptions(terminal, userInputSpan, suggestions, currentIndex) {
+    // Remove any existing completion displays
+    const existingCompletions = terminal.querySelectorAll('.completion-suggestions, .completion-indicator');
+    existingCompletions.forEach(el => el.remove());
+
+    // Show all suggestions
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'line completion-suggestions';
+    suggestionsDiv.style.color = 'var(--cyan)';
+    suggestionsDiv.textContent = suggestions.join('   ');
+    
+    // Show current selection indicator
+    const indicatorDiv = document.createElement('div');
+    indicatorDiv.className = 'line completion-indicator';
+    indicatorDiv.style.color = 'var(--yellow)';
+    indicatorDiv.innerHTML = `[${currentIndex + 1}/${suggestions.length}] <span class="cmd">${suggestions[currentIndex]}</span> - Press Ctrl+U to cycle`;
+    
+    const currentPrompt = userInputSpan.closest('.prompt');
+    if (currentPrompt) {
+      // Insert AFTER the current prompt, not before
+      currentPrompt.insertAdjacentElement('afterend', suggestionsDiv);
+      suggestionsDiv.insertAdjacentElement('afterend', indicatorDiv);
+    } else {
+      terminal.appendChild(suggestionsDiv);
+      terminal.appendChild(indicatorDiv);
+    }
+    
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  function cycleToNextSuggestion(hiddenInput, userInputSpan) {
+    if (autocompleteSuggestions.length === 0) return;
+
+    autocompleteIndex = (autocompleteIndex + 1) % autocompleteSuggestions.length;
+    applyCompletion(hiddenInput, userInputSpan, autocompleteSuggestions[autocompleteIndex]);
+    
+    // Update the completion display with new index
+    showCompletionOptions(terminal, userInputSpan, autocompleteSuggestions, autocompleteIndex);
+  }
+
+  function resetAutocompleteState() {
+    autocompleteSuggestions = [];
+    autocompleteIndex = -1;
+    autocompleteBaseInput = '';
+    
+    // Remove any existing completion displays when resetting
+    const existingCompletions = terminal.querySelectorAll('.completion-suggestions, .completion-indicator');
+    existingCompletions.forEach(el => el.remove());
+  }
+
+  function getBaseInput(input) {
+    const parts = input.trim().split(' ');
+    if (parts.length === 1) {
+      return ''; // For command completion
+    } else {
+      return parts.slice(0, -1).join(' '); // Everything except the last part
+    }
+  }
+
+  function startNewAutocompleteSession(currentInput, hiddenInput, userInputSpan, terminal) {
+    const suggestions = getAutocompleteSuggestions(currentInput);
+    
+    if (suggestions.length === 0) {
+      // No matches
+      showNoMatchesMessage(terminal, userInputSpan);
       return;
     }
 
-    // Enter: submit command
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const input = hiddenInput.value.trim();
+    // Initialize autocomplete session
+    autocompleteSuggestions = suggestions;
+    autocompleteIndex = 0;
+    autocompleteBaseInput = getBaseInput(currentInput);
 
-      // Make the current input line static by removing its ID and cursor
-      if (userInputSpan) {
-        const oldCursor = userInputSpan.nextElementSibling;
-        if (oldCursor && oldCursor.classList.contains('cursor')) {
-          oldCursor.remove(); // Remove the old cursor
-        }
-        userInputSpan.removeAttribute('id');
-      }
-
-      // Only process a command if the input is not empty
-      if (input !== '') {
-        // Await the command handler to get the result and new directory
-        const { clear, currentDirectory } = await handleCommand(input, terminal);
-
-        // If the command was 'clear', it handles its own new prompt.
-        if (clear) {
-          commandHistory.push(input);
-          historyIndex = -1;
-          hiddenInput.value = '';
-          terminal.scrollTop = terminal.scrollHeight;
-          return; // Stop here
-        }
-        
-        commandHistory.push(input);
-        // After processing, create the new prompt with the updated directory
-        createNewPrompt(terminal, currentDirectory);
-      } else {
-        // For empty commands, get the last directory and create a new prompt
-        const lastPromptDir = terminal.querySelector('.line.prompt:last-child .prompt-dir');
-        const currentDirText = lastPromptDir ? lastPromptDir.textContent : '~';
-        createNewPrompt(terminal, currentDirText.replace('~', '/').replace('//', '/'));
-      }
-
-      historyIndex = -1; // Reset history index
-      hiddenInput.value = '';
-      terminal.scrollTop = terminal.scrollHeight;
+    if (suggestions.length === 1) {
+      // Only one suggestion, auto-complete it
+      applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
+    } else {
+      // Show completion options
+      showCompletionOptions(terminal, userInputSpan, suggestions, autocompleteIndex);
     }
-  });
-}
+  }
 
-// Helper function to create a new prompt line
-function createNewPrompt(terminal, path) {
-  const newPrompt = document.createElement('div');
-  newPrompt.className = 'line prompt';
-  const dirText = `~${path === '/' ? '' : path}`;
-  newPrompt.innerHTML = `
-      <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">${dirText}</span><span class="prompt-symbol">$</span>
-      <span id="user-input"></span><span class="cursor">|</span>
-    `;
-  terminal.appendChild(newPrompt);
+  function applyCompletion(hiddenInput, userInputSpan, completion) {
+    const parts = hiddenInput.value.trim().split(' ');
+    
+    if (parts.length === 1) {
+      // Command completion - just replace the command, add space after
+      hiddenInput.value = completion + ' ';
+    } else {
+      // Argument completion - replace the last part
+      parts[parts.length - 1] = completion;
+      hiddenInput.value = parts.join(' ') + ' ';
+    }
+    
+    // Update the user input span directly - REMOVE THE EXTRA " " + 
+    if (userInputSpan) {
+      userInputSpan.textContent = hiddenInput.value; // NO EXTRA SPACE HERE
+    }
+    
+    // Set cursor position to end
+    setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
+  }
+
+  function showNoMatchesMessage(terminal, userInputSpan) {
+    const noMatchesDiv = document.createElement('div');
+    noMatchesDiv.className = 'line';
+    noMatchesDiv.style.color = 'var(--red)';
+    noMatchesDiv.textContent = 'No matches found.';
+    
+    const currentPrompt = userInputSpan.closest('.prompt');
+    if (currentPrompt) {
+      currentPrompt.insertAdjacentElement('afterend', noMatchesDiv);
+    } else {
+      terminal.appendChild(noMatchesDiv);
+    }
+    
+    terminal.scrollTop = terminal.scrollHeight;
+  }
 }

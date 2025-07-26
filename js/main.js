@@ -1,9 +1,13 @@
 import { centerWindow, setupWindowControls } from './terminal-ui.js';
 import { setupInput } from './terminal-events.js';
 import { resetTerminal } from './terminal-logic.js';
+import { loadSavedTheme } from './theme-manager.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Initializing terminal UI...');
+
+  // Load saved theme first
+  loadSavedTheme();
 
   // Get all DOM elements
   const windowEl = document.querySelector('.window');

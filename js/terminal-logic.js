@@ -1,6 +1,78 @@
 import { showWelcomeMessage, typeAnimatedText } from './terminal-ui.js';
-// Import commandHistory to be used by the 'history' command
 import { resetCommandHistory, commandHistory } from './terminal-events.js';
+import { themes, getCurrentTheme, setTheme, getThemesList } from './theme-manager.js';
+
+// File system structure for autocomplete
+export const fileSystem = {
+  '/': {
+    'README.md': 'file',
+    'package.json': 'file',
+    'css/': 'directory',
+    'js/': 'directory',
+    'assets/': 'directory'
+  },
+  '/css/': {
+    'base.css': 'file',
+    'terminal.css': 'file',
+    'layout.css': 'file',
+    'animations.css': 'file'
+  },
+  '/js/': {
+    'main.js': 'file',
+    'terminal-logic.js': 'file',
+    'terminal-ui.js': 'file',
+    'terminal-events.js': 'file',
+    'theme-manager.js': 'file'
+  },
+  '/assets/': {
+    'images/': 'directory',
+    'docs/': 'directory'
+  }
+};
+
+// Get autocomplete suggestions for commands and files
+export function getAutocompleteSuggestions(input) {
+  const parts = input.trim().split(' ');
+  const command = parts[0].toLowerCase();
+  const arg = parts[1] || '';
+
+  // Command autocomplete
+  if (parts.length === 1) {
+    const allCommands = commandList.map(c => c.cmd);
+    return allCommands.filter(c => c.startsWith(command));
+  }
+
+  // File/theme autocomplete for specific commands
+  if (parts.length === 2) {
+    switch (command) {
+      case 'cat':
+        return getFileCompletions(arg);
+      case 'themes':
+        return getThemeCompletions(arg);
+      case 'cd':
+        return getDirectoryCompletions(arg);
+      default:
+        return [];
+    }
+  }
+
+  return [];
+}
+
+function getFileCompletions(partial) {
+  const files = Object.keys(fileSystem[currentDirectory] || {});
+  return files.filter(f => f.startsWith(partial) && fileSystem[currentDirectory][f] === 'file');
+}
+
+function getThemeCompletions(partial) {
+  const themeKeys = Object.keys(themes);
+  return themeKeys.filter(t => t.startsWith(partial));
+}
+
+function getDirectoryCompletions(partial) {
+  const items = Object.keys(fileSystem[currentDirectory] || {});
+  return items.filter(f => f.startsWith(partial) && fileSystem[currentDirectory][f] === 'directory');
+}
 
 // Centralized command list for help and autocomplete
 export const commandList = [
@@ -141,28 +213,38 @@ export async function handleCommand(input, terminal) {
       break;
 
     case 'cat':
-      const fileName = args[0];
-      if (!fileName) {
-        const errorLine = document.createElement('div');
-        errorLine.className = 'line';
-        errorLine.textContent = 'cat: missing operand';
-        terminal.appendChild(errorLine);
+      const filename = args[0];
+      if (!filename) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'line';
+        errorDiv.innerHTML = `❌ Usage: <span class="cmd">cat &lt;filename&gt;</span>`;
+        terminal.appendChild(errorDiv);
+        
+        const tipDiv = document.createElement('div');
+        tipDiv.className = 'line pro-tip';
+        tipDiv.innerHTML = `💡 Try: <span class="cmd">cat README.md</span> or <span class="cmd">cat package.json</span>`;
+        terminal.appendChild(tipDiv);
         break;
       }
 
-      const filePath = currentDirectory === '/' ? `/${fileName}` : `${currentDirectory}/${fileName}`;
-      const fileContent = await getFileContent(filePath);
-
-      if (fileContent !== null) {
-        const contentPre = document.createElement('pre');
-        contentPre.className = 'line file-content';
-        contentPre.textContent = fileContent;
-        terminal.appendChild(contentPre);
+      // Check if file exists in current directory
+      const currentFiles = fileSystem[currentDirectory] || {};
+      if (currentFiles[filename] === 'file') {
+        // Display file content based on filename
+        displayFileContent(terminal, filename);
       } else {
-        const errorLine = document.createElement('div');
-        errorLine.className = 'line';
-        errorLine.textContent = `cat: ${fileName}: No such file or directory`;
-        terminal.appendChild(errorLine);
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'line';
+        errorDiv.innerHTML = `❌ File '<span class="cmd">${filename}</span>' not found in current directory.`;
+        terminal.appendChild(errorDiv);
+        
+        const availableFiles = Object.keys(currentFiles).filter(f => currentFiles[f] === 'file');
+        if (availableFiles.length > 0) {
+          const tipDiv = document.createElement('div');
+          tipDiv.className = 'line pro-tip';
+          tipDiv.innerHTML = `💡 Available files: ${availableFiles.map(f => `<span class="cmd">${f}</span>`).join(', ')}`;
+          terminal.appendChild(tipDiv);
+        }
       }
       break;
 
@@ -199,8 +281,7 @@ export async function handleCommand(input, terminal) {
       const prompt = document.createElement('div');
       prompt.className = 'line prompt';
       prompt.innerHTML = `
-        <span class="prompt-user">guest@peetzie</span><span class="prompt-host">:</span><span class="prompt-dir">~${currentDirectory === '/' ? '' : currentDirectory}</span><span class="prompt-symbol">$</span>
-        <span id="user-input"></span><span class="cursor">|</span>
+        <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
       `;
       terminal.appendChild(prompt);
       return { clear: true }; // Special return for 'clear'
@@ -266,10 +347,61 @@ export async function handleCommand(input, terminal) {
       break;
 
     case 'themes':
-      const themeLine = document.createElement('div');
-      themeLine.className = 'line';
-      themeLine.textContent = 'Theme switching functionality is coming soon!';
-      terminal.appendChild(themeLine);
+      // Check if user wants to set a theme or list themes
+      const themeArg = args[0];
+      
+      if (!themeArg) {
+        // List all available themes
+        const currentTheme = getCurrentTheme();
+        const themesList = getThemesList();
+        
+        const themeTitle = document.createElement('div');
+        themeTitle.className = 'line';
+        themeTitle.innerHTML = `🎨 Available Themes (Current: <span class="cmd">${themes[currentTheme].name}</span>):`;
+        terminal.appendChild(themeTitle);
+        
+        terminal.appendChild(document.createElement('br'));
+        
+        themesList.forEach(({ key, name, description }) => {
+          const themeDiv = document.createElement('div');
+          themeDiv.className = 'line help-line';
+          const isActive = key === currentTheme ? ' ✓' : '';
+          themeDiv.innerHTML = `
+            <span class="cmd">${key}${isActive}</span>
+            <span class="cmd-desc">${description}</span>
+          `;
+          terminal.appendChild(themeDiv);
+        });
+        
+        const usageDiv = document.createElement('div');
+        usageDiv.className = 'line';
+        usageDiv.style.marginTop = '1em';
+        usageDiv.innerHTML = `
+          <div class="line pro-tip">💡 Usage: <span class="cmd">themes &lt;theme-name&gt;</span> to switch themes</div>
+          <div class="line pro-tip">💡 Examples:</div>
+          <div class="line pro-tip">   • <span class="cmd">themes catppuccin-mocha</span> - Switch to dark Catppuccin theme</div>
+          <div class="line pro-tip">   • <span class="cmd">themes catppuccin-latte</span> - Switch to light theme</div>
+          <div class="line pro-tip">   • <span class="cmd">themes gruvbox</span> - Switch to retro Gruvbox theme</div>
+          <div class="line pro-tip">   • <span class="cmd">themes matrix</span> - Switch to Matrix green theme</div>
+        `;
+        terminal.appendChild(usageDiv);
+        
+      } else {
+        // Try to set the specified theme
+        const success = setTheme(themeArg);
+        
+        if (success) {
+          const successDiv = document.createElement('div');
+          successDiv.className = 'line';
+          successDiv.innerHTML = `✨ Theme changed to <span class="cmd">${themes[themeArg].name}</span>! ${themes[themeArg].description}`;
+          terminal.appendChild(successDiv);
+        } else {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'line';
+          errorDiv.innerHTML = `❌ Theme '<span class="cmd">${themeArg}</span>' not found. Use <span class="cmd">themes</span> to see available themes.`;
+          terminal.appendChild(errorDiv);
+        }
+      }
       break;
 
     case 'welcome':
@@ -385,4 +517,61 @@ function calculateAge(birthDateString) {
   }
   
   return age;
+}
+
+function displayFileContent(terminal, filename) {
+  const fileContents = {
+    'README.md': `# 🚀 Terminal Portfolio
+
+Welcome to my interactive terminal portfolio! This project showcases my skills and experience through a terminal-style interface.
+
+## 🎨 Themes
+- **Catppuccin Mocha** (Default) - Dark theme with rich colors
+- **Gruvbox** - Retro theme with warm earth tones  
+- **Matrix** - Classic green-on-black style
+- **Catppuccin Latte** - Light theme for daytime use
+
+## 🛠️ Technologies Used
+- **Frontend**: HTML5, CSS3, JavaScript (ES6 modules)
+- **Styling**: CSS custom properties for theming
+- **Architecture**: Modular design with separation of concerns
+
+## 📝 Available Commands
+Type \`help\` to see all available commands!`,
+
+    'package.json': `{
+  "name": "terminal-portfolio",
+  "version": "1.0.0",
+  "description": "Interactive terminal-style portfolio",
+  "main": "index.html",
+  "scripts": {
+    "start": "echoport",
+    "dev": "live-server"
+  },
+  "keywords": ["portfolio", "terminal", "javascript", "css"],
+  "author": "Frederik Peetz Schou Larsen",
+  "license": "MIT"
+}`,
+
+    'base.css': `/* Base CSS with theme system */
+/* Contains color variables for all themes */
+/* Catppuccin Mocha (default), Gruvbox, Matrix, Catppuccin Latte */`,
+
+    'terminal.css': `/* Terminal-specific styling */
+/* Prompt colors, scrollbar, window styling */`,
+
+    'main.js': `/* Main entry point */
+/* Initializes terminal UI and loads saved theme */`
+  };
+
+  const content = fileContents[filename] || `Content of ${filename}`;
+  
+  const fileDiv = document.createElement('pre');
+  fileDiv.className = 'line file-content';
+  fileDiv.style.whiteSpace = 'pre-wrap';
+  fileDiv.style.color = 'var(--foreground)';
+  fileDiv.style.marginLeft = '0';
+  fileDiv.style.fontFamily = 'inherit';
+  fileDiv.textContent = content;
+  terminal.appendChild(fileDiv);
 }

@@ -59,7 +59,11 @@
 
 .prompt-symbol {
   color: var(--foreground);
-  margin-right: 0.5em;
+  font-weight: bold;
+}
+
+.prompt-symbol::after {
+  content: " "; /* Add space after $ symbol for ALL prompts */
 }
 
 .cursor {
@@ -67,7 +71,7 @@
   font-weight: bold;
   color: var(--foreground);
   animation: blink 1s steps(1) infinite;
-  margin-left: 1px;
+  /* Remove margin-left to keep cursor right next to text */
 }
 
 .cmd {
@@ -77,12 +81,15 @@
 
 .cmd-desc {
   color: var(--comment);
+  margin-left: 1em;
 }
 
 /* New style for help command alignment */
 .help-line {
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin: 4px 0;
 }
 
 .help-line .cmd {
@@ -96,6 +103,7 @@
 
 .pro-tip {
   color: var(--yellow);
+  font-style: italic;
   margin-top: 10px;
 }
 
@@ -107,6 +115,22 @@
 .completion-suggestions {
   color: var(--comment);
   margin-bottom: 5px;
+  background: var(--black-light);
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin: 2px 0;
+  font-family: inherit;
+}
+
+.completion-indicator {
+  color: var(--yellow);
+  font-style: italic;
+  margin: 2px 0;
+}
+
+.completion-indicator .cmd {
+  color: var(--cyan);
+  font-weight: bold;
 }
 
 .file-content {
@@ -145,9 +169,8 @@
 }
 
 @keyframes blink {
-  50% {
-    opacity: 0;
-  }
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
 }
 
 /* Custom Scrollbar for Terminal */
@@ -207,4 +230,10 @@
   border: none;
   padding: 0;
   margin: 0;
+}
+
+/* Fix user input spacing */
+#user-input {
+  margin-left: 2px; /* Add small space for user input */
+  min-width: 1px; /* Ensure span is visible even when empty */
 }
