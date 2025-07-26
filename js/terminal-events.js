@@ -27,10 +27,9 @@ export function setupInput(hiddenInput, terminal) {
 
   // Update the visible user input span to reflect typed characters in real time
   hiddenInput.addEventListener('input', () => {
-    // Always get the current user input span (in case DOM changed)
     const userInputSpan = document.getElementById('user-input');
     if (userInputSpan) {
-      userInputSpan.textContent = hiddenInput.value; // REMOVE THE EXTRA " " + 
+      userInputSpan.textContent = hiddenInput.value;
     }
     
     // Reset autocomplete state when user types
@@ -58,7 +57,7 @@ export function setupInput(hiddenInput, terminal) {
       return;
     }
 
-    // Reset autocomplete on any other key
+    // Reset autocomplete on any other key (except Ctrl+U)
     if (!e.ctrlKey || e.key.toLowerCase() !== 'u') {
       resetAutocompleteState();
     }
@@ -192,46 +191,6 @@ export function setupInput(hiddenInput, terminal) {
   });
 
   // Helper functions for autocomplete cycling
-  function showCompletionOptions(terminal, userInputSpan, suggestions, currentIndex) {
-    // Remove any existing completion displays
-    const existingCompletions = terminal.querySelectorAll('.completion-suggestions, .completion-indicator');
-    existingCompletions.forEach(el => el.remove());
-
-    // Show all suggestions
-    const suggestionsDiv = document.createElement('div');
-    suggestionsDiv.className = 'line completion-suggestions';
-    suggestionsDiv.style.color = 'var(--cyan)';
-    suggestionsDiv.textContent = suggestions.join('   ');
-    
-    // Show current selection indicator
-    const indicatorDiv = document.createElement('div');
-    indicatorDiv.className = 'line completion-indicator';
-    indicatorDiv.style.color = 'var(--yellow)';
-    indicatorDiv.innerHTML = `[${currentIndex + 1}/${suggestions.length}] <span class="cmd">${suggestions[currentIndex]}</span> - Press Ctrl+U to cycle`;
-    
-    const currentPrompt = userInputSpan.closest('.prompt');
-    if (currentPrompt) {
-      // Insert AFTER the current prompt, not before
-      currentPrompt.insertAdjacentElement('afterend', suggestionsDiv);
-      suggestionsDiv.insertAdjacentElement('afterend', indicatorDiv);
-    } else {
-      terminal.appendChild(suggestionsDiv);
-      terminal.appendChild(indicatorDiv);
-    }
-    
-    terminal.scrollTop = terminal.scrollHeight;
-  }
-
-  function cycleToNextSuggestion(hiddenInput, userInputSpan) {
-    if (autocompleteSuggestions.length === 0) return;
-
-    autocompleteIndex = (autocompleteIndex + 1) % autocompleteSuggestions.length;
-    applyCompletion(hiddenInput, userInputSpan, autocompleteSuggestions[autocompleteIndex]);
-    
-    // Update the completion display with new index
-    showCompletionOptions(terminal, userInputSpan, autocompleteSuggestions, autocompleteIndex);
-  }
-
   function resetAutocompleteState() {
     autocompleteSuggestions = [];
     autocompleteIndex = -1;
@@ -266,48 +225,88 @@ export function setupInput(hiddenInput, terminal) {
     autocompleteBaseInput = getBaseInput(currentInput);
 
     if (suggestions.length === 1) {
-      // Only one suggestion, auto-complete it
+      // Single match: complete it immediately
       applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
+      resetAutocompleteState(); // Reset since we completed
     } else {
-      // Show completion options
-      showCompletionOptions(terminal, userInputSpan, suggestions, autocompleteIndex);
+      // Multiple matches: show first one and display all options
+      applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
+      showCompletionOptions(terminal, userInputSpan, suggestions, 0);
     }
+  }
+
+  function cycleToNextSuggestion(hiddenInput, userInputSpan) {
+    if (autocompleteSuggestions.length === 0) return;
+
+    autocompleteIndex = (autocompleteIndex + 1) % autocompleteSuggestions.length;
+    applyCompletion(hiddenInput, userInputSpan, autocompleteSuggestions[autocompleteIndex]);
+    
+    // Update the completion display with new index
+    showCompletionOptions(terminal, userInputSpan, autocompleteSuggestions, autocompleteIndex);
   }
 
   function applyCompletion(hiddenInput, userInputSpan, completion) {
     const parts = hiddenInput.value.trim().split(' ');
     
     if (parts.length === 1) {
-      // Command completion - just replace the command, add space after
+      // Command completion
       hiddenInput.value = completion + ' ';
     } else {
-      // Argument completion - replace the last part
+      // Argument completion
       parts[parts.length - 1] = completion;
       hiddenInput.value = parts.join(' ') + ' ';
     }
     
-    // Update the user input span directly - REMOVE THE EXTRA " " + 
-    if (userInputSpan) {
-      userInputSpan.textContent = hiddenInput.value; // NO EXTRA SPACE HERE
-    }
-    
-    // Set cursor position to end
+    if (userInputSpan) userInputSpan.textContent = hiddenInput.value;
     setTimeout(() => hiddenInput.setSelectionRange(hiddenInput.value.length, hiddenInput.value.length), 0);
   }
 
-  function showNoMatchesMessage(terminal, userInputSpan) {
-    const noMatchesDiv = document.createElement('div');
-    noMatchesDiv.className = 'line';
-    noMatchesDiv.style.color = 'var(--red)';
-    noMatchesDiv.textContent = 'No matches found.';
+  function showCompletionOptions(terminal, userInputSpan, suggestions, currentIndex) {
+    // Remove any existing completion displays
+    const existingCompletions = terminal.querySelectorAll('.completion-suggestions, .completion-indicator');
+    existingCompletions.forEach(el => el.remove());
+
+    // Show all suggestions
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'line completion-suggestions';
+    suggestionsDiv.style.color = 'var(--cyan)';
+    suggestionsDiv.textContent = suggestions.join('   ');
+    
+    // Show current selection indicator
+    const indicatorDiv = document.createElement('div');
+    indicatorDiv.className = 'line completion-indicator';
+    indicatorDiv.style.color = 'var(--yellow)';
+    indicatorDiv.innerHTML = `[${currentIndex + 1}/${suggestions.length}] <span class="cmd">${suggestions[currentIndex]}</span> - Press Ctrl+U to cycle`;
     
     const currentPrompt = userInputSpan.closest('.prompt');
     if (currentPrompt) {
-      currentPrompt.insertAdjacentElement('afterend', noMatchesDiv);
+      // Insert AFTER the current prompt, not before
+      currentPrompt.insertAdjacentElement('afterend', suggestionsDiv);
+      suggestionsDiv.insertAdjacentElement('afterend', indicatorDiv);
     } else {
-      terminal.appendChild(noMatchesDiv);
+      terminal.appendChild(suggestionsDiv);
+      terminal.appendChild(indicatorDiv);
     }
     
     terminal.scrollTop = terminal.scrollHeight;
   }
+
+  function showNoMatchesMessage(terminal, userInputSpan) {
+    const noMatchDiv = document.createElement('div');
+    noMatchDiv.className = 'line';
+    noMatchDiv.style.color = 'var(--comment)';
+    noMatchDiv.textContent = 'No completions found';
+    
+    const currentPrompt = userInputSpan.closest('.prompt');
+    if (currentPrompt) {
+      // Insert AFTER the current prompt, not before
+      currentPrompt.insertAdjacentElement('afterend', noMatchDiv);
+    } else {
+      terminal.appendChild(noMatchDiv);
+    }
+    terminal.scrollTop = terminal.scrollHeight;
+  }
+
+  // Initially focus the hidden input
+  hiddenInput.focus();
 }

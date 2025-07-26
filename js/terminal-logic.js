@@ -284,7 +284,7 @@ export async function handleCommand(input, terminal) {
         <span class="prompt-user">guest</span>@<span class="prompt-host">peetzie</span>:<span class="prompt-dir">~</span><span class="prompt-symbol">$ </span><span id="user-input"></span><span class="cursor">|</span>
       `;
       terminal.appendChild(prompt);
-      return { clear: true }; // Special return for 'clear'
+      return { clear: true };
 
     case 'help':
       const title = document.createElement('div');

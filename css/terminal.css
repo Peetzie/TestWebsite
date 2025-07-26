@@ -62,10 +62,6 @@
   font-weight: bold;
 }
 
-.prompt-symbol::after {
-  content: " "; /* Add space after $ symbol for ALL prompts */
-}
-
 .cursor {
   display: inline-block;
   font-weight: bold;
