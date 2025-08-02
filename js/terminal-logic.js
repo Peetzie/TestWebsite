@@ -2,7 +2,7 @@ import { showWelcomeMessage, typeAnimatedText } from './terminal-ui.js';
 import { resetCommandHistory, commandHistory } from './terminal-events.js';
 import { themes, getCurrentTheme, setTheme, getThemesList } from './theme-manager.js';
 
-// Dynamic file system cache for autocomplete - populated from GitHub API
+// Dynamic file system cache for autocomplete
 export const fileSystemStructure = new Map();
 
 // Get autocomplete suggestions for commands and files
@@ -85,8 +85,8 @@ export const commandList = [
   { cmd: 'whoami', desc: 'Display the current user' },
 ];
 
-let currentDirectory = '/'; // Initial directory
-const fileSystemCache = new Map(); // Cache for API responses
+let currentDirectory = '/'; // Initial directory - Simulating standard Home directory of UNIX systems
+const fileSystemCache = new Map(); // Cache for responses. 
 
 // Export current directory getter
 export function getCurrentDirectory() {
@@ -94,6 +94,7 @@ export function getCurrentDirectory() {
 }
 
 // --- GitHub API Helper ---
+// Recieve data structure of the project
 async function getDirectoryContents(path) {
   if (fileSystemCache.has(path)) {
     return fileSystemCache.get(path);
@@ -143,15 +144,10 @@ async function getFileContent(path) {
   }
 }
 
-// Add the missing resetTerminal function and export it
 export function resetTerminal(terminal) {
   // Clear existing content
   terminal.innerHTML = '';
-  
-  // Show the welcome message
   showWelcomeMessage(terminal);
-  
-  // Reset command history
   resetCommandHistory();
   
   // Reset directory state
@@ -167,7 +163,7 @@ export function resetTerminal(terminal) {
   terminal.appendChild(prompt);
 }
 
-// Main command handler
+// Main navigation based on commands
 export async function handleCommand(input, terminal) {
   const trimmedInput = input.trim();
   const [command, ...args] = trimmedInput.split(' ');
@@ -302,7 +298,7 @@ export async function handleCommand(input, terminal) {
       title.className = 'line';
       title.textContent = 'Available commands:';
       terminal.appendChild(title);
-      terminal.appendChild(document.createElement('br')); // For a blank line
+      terminal.appendChild(document.createElement('br')); 
 
       commandList.forEach(({ cmd, desc }) => {
         const helpDiv = document.createElement('div');
@@ -339,7 +335,7 @@ export async function handleCommand(input, terminal) {
       githubResponse.className = 'line';
       githubResponse.textContent = 'Opening GitHub profile in a new window...';
       terminal.appendChild(githubResponse);
-      setTimeout(() => window.open('https://github.com/Peetzie', '_blank'), 1300);
+      setTimeout(() => window.open('https://github.com/Peetzie', '_blank'), 700);
       break;
 
     case 'linkedin':
@@ -358,7 +354,7 @@ export async function handleCommand(input, terminal) {
       break;
 
     case 'themes':
-      // Check if user wants to set a theme or list themes
+      // Inspect input, to evlauate to either change theme or list themes 
       const themeArg = args[0];
       
       if (!themeArg) {
@@ -398,7 +394,7 @@ export async function handleCommand(input, terminal) {
         terminal.appendChild(usageDiv);
         
       } else {
-        // Try to set the specified theme
+        // Set the specified theme
         const success = setTheme(themeArg);
         
         if (success) {
@@ -481,7 +477,7 @@ export async function handleCommand(input, terminal) {
       emailResponse.className = 'line';
       emailResponse.textContent = 'Opening email client...';
       terminal.appendChild(emailResponse);
-      setTimeout(() => window.open('mailto:your.email@example.com', '_blank'), 700);
+      setTimeout(() => window.open('mailto:flarsen.uphold283@simplelogin.com', '_self'), 700); // Use _self to prevent new window
       break;
 
     case 'echo':
@@ -493,7 +489,7 @@ export async function handleCommand(input, terminal) {
       break;
 
     default:
-      // Handle multi-word commands that might have been missed
+      // Handle multi-word commands
       if (trimmedInput.toLowerCase() === 'about me') {
         const age = calculateAge('1996-10-17');
         const aboutText =
@@ -516,7 +512,7 @@ export async function handleCommand(input, terminal) {
   return { clear: false, currentDirectory };
 }
 
-// Helper function to calculate age
+// Helper function to calculate age for the about me function, to ensure its updated as per todays date. 
 function calculateAge(birthDateString) {
   const birth = new Date(birthDateString);
   const today = new Date();

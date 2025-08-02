@@ -1,10 +1,10 @@
 .journey-window {
   position: fixed;
-  top: 40px; /* Adjusted top position */
+  top: 40px; 
   left: 50%;
   transform: translateX(-50%);
-  width: 1200px;      /* Increased width */
-  height: 700px;      /* Increased height */
+  width: 1200px;     
+  height: 700px;      
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
@@ -138,10 +138,10 @@
 
 .timeline-event.up .timeline-vert {
   position: absolute;
-  top: 18%; /* Start at center line */
+  top: 18%; 
   left: 50%;
   width: 4px;
-  height: calc(50% - 70px); /* 70px is half the circle's height */
+  height: calc(50% - 70px); 
   background: #ff5f56;
   transform: translateX(-50%);
   z-index: 1;
@@ -151,12 +151,12 @@
 
 .timeline-event.down .timeline-vert {
   position: absolute;
-  top: 50%; /* Start at center line */
+  top: 50%; 
   left: 50%;
   width: 4px;
   height: calc(50% - 70px);
   background: #ff5f56;
-  transform: translateX(-50%) scaleY(-1); /* Flip downwards */
+  transform: translateX(-50%) scaleY(-1); 
   z-index: 1;
   opacity: 1;
   animation: timelineVertIn 0.8s forwards;
@@ -165,14 +165,14 @@
 .timeline-event.up .timeline-circle {
   position: absolute;
   left: 50%;
-  bottom: calc(50% + 125px); /* 10px gap from center line */
+  bottom: calc(50% + 125px); 
   transform: translateX(-50%);
 }
 
 .timeline-event.down .timeline-circle {
   position: absolute;
   left: 50%;
-  top: calc(50% + 127px); /* 10px gap from center line */
+  top: calc(50% + 127px); 
   transform: translateX(-50%);
 }
 

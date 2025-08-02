@@ -52,7 +52,7 @@ export function typeAnimatedText(terminal, text) {
   typeChar();
 }
 
-// Helper function to display the welcome message
+
 export function showWelcomeMessage(terminal) {
   const asciiArtLeft = String.raw`
     ______              __          _ __          __                             
@@ -62,7 +62,7 @@ export function showWelcomeMessage(terminal) {
 /_/   /_/   \___/\__,_/\___/_/  /_/_/|_|      /_____/\__,_/_/  /____/\___/_/ /_/ 
                                                                                                                                                     
 `;
-  // TO BE ADDED
+  // TODO: Add
   const asciiArtRight = `
 
 `;
@@ -103,30 +103,27 @@ export function showWelcomeMessage(terminal) {
   terminal.appendChild(welcomeContainer);
 }
 
-// Window controls: close, minimize, maximize, reopen
+// Window controls
 export function setupWindowControls(windowEl, closeBtn, minimizeBtn, maximizeBtn, reopenIcon) {
-  // For this example, we'll only implement maximize.
-  // You can add logic for close and minimize later.
+
 
   maximizeBtn.addEventListener('click', () => {
     const isMaximized = windowEl.classList.contains('maximized');
 
     if (isMaximized) {
-      // If it's currently maximized, we want to re-center it after it shrinks.
-      // We listen for the transition to end before centering.
+      // If it's currently maximized, re-center it after it shrinks.
       const onTransitionEnd = () => {
         centerWindow(windowEl);
-        // Important: Remove the event listener so it doesn't fire again
         windowEl.removeEventListener('transitionend', onTransitionEnd);
       };
       windowEl.addEventListener('transitionend', onTransitionEnd);
     }
     
-    // Toggle the class to start the transition (either maximizing or shrinking)
+    // Toggle the class to start maximized. 
     windowEl.classList.toggle('maximized');
   });
 
-  // Example for a reopen icon if you add minimize functionality
+  // Reopen icon
   if (reopenIcon) {
     reopenIcon.addEventListener('click', () => {
       windowEl.style.display = 'flex';

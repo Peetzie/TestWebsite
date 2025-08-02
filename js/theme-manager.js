@@ -1,4 +1,4 @@
-// Theme management system
+// Theme management
 export const themes = {
   'catppuccin-mocha': {
     name: 'Catppuccin Mocha',
@@ -38,7 +38,7 @@ export function setTheme(themeName) {
     document.documentElement.setAttribute('data-theme', themeName);
   }
   
-  // Save to localStorage
+  // Save to localStorage, for adding the same theme when upon re-visits. 
   localStorage.setItem('terminal-theme', themeName);
   
   return true;

@@ -6,7 +6,6 @@ import { loadSavedTheme } from './theme-manager.js';
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Initializing terminal UI...');
 
-  // Load saved theme first
   loadSavedTheme();
 
   // Get all DOM elements

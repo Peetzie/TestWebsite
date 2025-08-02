@@ -3,7 +3,7 @@
   align-items: center;
   padding: 8px;
   background: var(--black);
-  cursor: default; /* Changed from 'move' to prevent drag indication */
+  cursor: default;
   user-select: none;
   height: 25px;
 }
@@ -15,8 +15,8 @@
   margin-right: 8px;
   display: inline-block;
 }
-.red    { display: none; } /* Hide close button */
-.yellow { display: none; } /* Hide minimize button */
+.red    { display: none; } 
+.yellow { display: none; } 
 .green  { background-color: #27c93f; cursor: pointer; }
 
 .app-title {
@@ -32,11 +32,11 @@
   color: var(--foreground);
   font-size: 1rem;
   overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
+  overflow-x: hidden; 
   line-height: 1.4;
 }
 
-/* Style for the new prompt structure */
+
 .prompt {
   display: flex;
   align-items: center;
@@ -67,7 +67,7 @@
   font-weight: bold;
   color: var(--foreground);
   animation: blink 1s steps(1) infinite;
-  /* Remove margin-left to keep cursor right next to text */
+ 
 }
 
 .cmd {
@@ -80,7 +80,7 @@
   margin-left: 1em;
 }
 
-/* New style for help command alignment */
+
 .help-line {
   display: flex;
   justify-content: space-between;
@@ -89,7 +89,7 @@
 }
 
 .help-line .cmd {
-  flex: 0 0 120px; /* Give the command name a fixed width */
+  flex: 0 0 120px; 
   padding-right: 1rem;
 }
 
@@ -130,7 +130,7 @@
 }
 
 .file-content {
-  white-space: pre-wrap; /* Wrap long lines but preserve whitespace */
+  white-space: pre-wrap; 
   color: var(--foreground);
   background-color: rgba(255, 255, 255, 0.05);
   padding: 0.5rem;
@@ -146,10 +146,9 @@
   margin-bottom: 10px;
 }
 
-/* New styles for the welcome message layout */
 .welcome-container {
   display: flex;
-  gap: 2rem; /* Space between the two columns */
+  gap: 2rem; 
   align-items: flex-start;
 }
 
@@ -159,9 +158,9 @@
 
 .welcome-right {
   color: var(--magenta);
-  font-size: 0.2rem; /* Use a tiny font to fit the large art */
+  font-size: 0.2rem; 
   line-height: 1;
-  flex-shrink: 0; /* Prevent the art from being squished */
+  flex-shrink: 0; 
 }
 
 @keyframes blink {
@@ -169,31 +168,31 @@
   51%, 100% { opacity: 0; }
 }
 
-/* Custom Scrollbar for Terminal */
+
 .terminal::-webkit-scrollbar {
   width: 10px;
 }
 
 .terminal::-webkit-scrollbar-track {
-  background: var(--black); /* Dark background for the track */
+  background: var(--black); 
 }
 
 .terminal::-webkit-scrollbar-thumb {
-  background-color: var(--black-light); /* A lighter grey for the thumb */
+  background-color: var(--black-light); 
   border-radius: 10px;
-  border: 2px solid var(--black); /* Padding around thumb */
+  border: 2px solid var(--black); 
 }
 
 .terminal::-webkit-scrollbar-thumb:hover {
-  background-color: var(--comment); /* Lighter color on hover */
+  background-color: var(--comment); 
 }
 
 .window {
   position: fixed;
-  width: 80vw; /* Set width to 80% of the viewport width */
-  height: 70vh; /* Set height to 70% of the viewport height */
-  max-width: 1200px; /* Optional: set a maximum pixel width */
-  background: #24283b; /* A slightly different dark blue/purple */
+  width: 80vw; 
+  height: 70vh; 
+  max-width: 1200px; 
+  background: #24283b; 
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   border: 1px solid var(--black-light);
@@ -209,8 +208,8 @@
 .window.maximized {
   width: 100vw;
   height: 100vh;
-  top: 0 !important; /* Use !important to override inline styles from centerWindow */
-  left: 0 !important; /* Use !important to override inline styles from centerWindow */
+  top: 0 !important;
+  left: 0 !important; 
   border-radius: 0;
   max-width: none;
 }
@@ -230,6 +229,6 @@
 
 /* Fix user input spacing */
 #user-input {
-  margin-left: 8.5px; /* Add small space for user input */
-  min-width: 2px; /* Ensure span is visible even when empty */
+  margin-left: 8.5px; /* Troll variable, */
+  min-width: 2px;
 }

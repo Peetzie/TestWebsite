@@ -2,8 +2,8 @@
   position: absolute;
   top: 100px;
   left: 100px;
-  width: 900px; /* Increased from 700px */
-  height: 600px; /* Added a fixed height */
+  width: 900px; 
+  height: 600px; 
   border-radius: 8px;
   box-shadow: 0 8px 16px rgba(0,0,0,0.5);
   background-color: black;

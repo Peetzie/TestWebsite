@@ -1,15 +1,12 @@
 import { handleCommand, commandList, getAutocompleteSuggestions, getCurrentDirectory } from './terminal-logic.js';
 
-// Command history support
-export let commandHistory = []; // Export the array
+export let commandHistory = []; 
 let historyIndex = -1;   
-
-// Autocomplete cycling state
 let autocompleteSuggestions = [];
 let autocompleteIndex = -1;
 let autocompleteBaseInput = '';
 
-// Export a function to reset the command history from other modules
+
 export function resetCommandHistory() {
   commandHistory = [];
   historyIndex = -1;
@@ -39,12 +36,10 @@ export function setupInput(hiddenInput, terminal) {
     if (userInputSpan) {
       userInputSpan.textContent = hiddenInput.value;
     }
-    
-    // Reset autocomplete state when user types
     resetAutocompleteState();
   });
 
-  // Handle keydown for arrows and Enter - make the handler async
+  // Handle keydown for arrows and Enter 
   hiddenInput.addEventListener('keydown', async (e) => {
     const userInputSpan = document.getElementById('user-input');
 
@@ -54,12 +49,10 @@ export function setupInput(hiddenInput, terminal) {
       const currentInput = hiddenInput.value.trim();
       if (!currentInput) return;
 
-      // Check if we're continuing an autocomplete session
+      // Check if we're continuing an autocomplete session, if so we can resume the cycle
       if (autocompleteSuggestions.length > 0 && autocompleteBaseInput === getBaseInput(currentInput)) {
-        // Cycle to next suggestion
         cycleToNextSuggestion(hiddenInput, userInputSpan);
       } else {
-        // Start new autocomplete session
         startNewAutocompleteSession(currentInput, hiddenInput, userInputSpan, terminal);
       }
       return;
@@ -70,13 +63,14 @@ export function setupInput(hiddenInput, terminal) {
       resetAutocompleteState();
     }
 
-    // Clear screen shortcut
+    // Clear screen shortcut -- Normal UNIX style cmd line. 
     if (e.ctrlKey && e.key.toLowerCase() === 'l') {
       e.preventDefault();
       
       // Reset autocomplete state first
       resetAutocompleteState();
       
+      // Clear input
       terminal.innerHTML = '';
       const prompt = document.createElement('div');
       prompt.className = 'line prompt';
@@ -124,11 +118,10 @@ export function setupInput(hiddenInput, terminal) {
       const command = hiddenInput.value.trim();
       
       if (command) {
-        // Add to history
         commandHistory.push(command);
         historyIndex = -1;
 
-        // Special handling for clear command - don't show command echo
+        // Edge Case handling for clear command - don't show command echo
         if (command.toLowerCase() === 'clear') {
           // Just execute the command without showing it
           try {
@@ -181,14 +174,11 @@ export function setupInput(hiddenInput, terminal) {
         newPrompt.className = 'line prompt';
         newPrompt.innerHTML = createPromptHTML(getCurrentDirectory());
         terminal.appendChild(newPrompt);
-
-        // Clear input
         hiddenInput.value = '';
         
-        // Scroll to bottom
         terminal.scrollTop = terminal.scrollHeight;
         
-        // Ensure focus stays on hidden input
+
         hiddenInput.focus();
       }
     }
@@ -210,12 +200,11 @@ export function setupInput(hiddenInput, terminal) {
     if (parts.length === 1) {
       return ''; // For command completion
     } else {
-      return parts.slice(0, -1).join(' '); // Everything except the last part
+      return parts.slice(0, -1).join(' ');
     }
   }
 
   function startNewAutocompleteSession(currentInput, hiddenInput, userInputSpan, terminal) {
-    // Make this async to handle GitHub API calls for file completion
     (async () => {
       const suggestions = await getAutocompleteSuggestions(currentInput);
       
@@ -233,9 +222,9 @@ export function setupInput(hiddenInput, terminal) {
       if (suggestions.length === 1) {
         // Single match: complete it immediately
         applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
-        resetAutocompleteState(); // Reset since we completed
+        resetAutocompleteState(); 
       } else {
-        // Multiple matches: show first one and display all options
+        // Multiple matches: show first one and display all options, use logic above (up and down to reference)
         applyCompletion(hiddenInput, userInputSpan, suggestions[0]);
         showCompletionOptions(terminal, userInputSpan, suggestions, 0);
       }
@@ -256,10 +245,8 @@ export function setupInput(hiddenInput, terminal) {
     const parts = hiddenInput.value.trim().split(' ');
     
     if (parts.length === 1) {
-      // Command completion
       hiddenInput.value = completion + ' ';
     } else {
-      // Argument completion
       parts[parts.length - 1] = completion;
       hiddenInput.value = parts.join(' ') + ' ';
     }
@@ -273,7 +260,7 @@ export function setupInput(hiddenInput, terminal) {
     const existingCompletions = terminal.querySelectorAll('.completion-suggestions, .completion-indicator');
     existingCompletions.forEach(el => el.remove());
 
-    // Show all suggestions
+    // Show all suggestions from autosuggest
     const suggestionsDiv = document.createElement('div');
     suggestionsDiv.className = 'line completion-suggestions';
     suggestionsDiv.style.color = 'var(--cyan)';
